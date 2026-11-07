@@ -1,71 +1,31 @@
-/* Mein Handwerkerportal – Prototyp (PWA, ohne Backend).
- * Daten liegen im localStorage des Geräts. Für den echten Betrieb wird später
- * ein Backend (Benutzerkonten, Datenbank, Benachrichtigungen) angebunden. */
+/* Mein Handwerkerportal – Oberfläche (Single-Page-App mit Hash-Routing).
+ * Datenzugriff über `api` (siehe api.js): Supabase-Backend oder Demo-Modus. */
 'use strict';
 
-const TRADES = [
-  { id: 'elektro', name: 'Elektriker', emoji: '⚡' },
-  { id: 'sanitaer', name: 'Sanitär & Heizung', emoji: '🚿' },
-  { id: 'maler', name: 'Maler & Lackierer', emoji: '🎨' },
-  { id: 'tischler', name: 'Tischler / Schreiner', emoji: '🪚' },
-  { id: 'dach', name: 'Dachdecker', emoji: '🏠' },
-  { id: 'fliesen', name: 'Fliesenleger', emoji: '🧱' },
-  { id: 'garten', name: 'Garten & Landschaft', emoji: '🌳' },
-  { id: 'umzug', name: 'Umzug & Montage', emoji: '📦' },
-];
+const api = createApi();
+const IS_DEMO = api.mode === 'demo';
+
+/* ---------- Hilfsfunktionen ---------- */
 const tradeById = (id) => TRADES.find((t) => t.id === id) || { name: id, emoji: '🔧' };
-
-const SEED = {
-  version: 1,
-  role: 'kunde',
-  me: { name: 'Max Mustermann', plz: '80331', email: 'max@example.de' },
-  myCraftsmanId: 'h1',
-  craftsmen: [
-    { id: 'h1', name: 'Elektro Huber GmbH', trades: ['elektro'], plz: '80335', city: 'München', rating: 4.8, reviews: 126, about: 'Elektroinstallationen, Smart Home, E-Mobilität und Photovoltaik. Meisterbetrieb seit 1998.', phone: '089 1234567' },
-    { id: 'h2', name: 'Bad & Wärme Schmid', trades: ['sanitaer'], plz: '80469', city: 'München', rating: 4.6, reviews: 88, about: 'Badsanierung aus einer Hand, Heizungstausch, Wärmepumpen und Notdienst.', phone: '089 2345678' },
-    { id: 'h3', name: 'Malerwerkstatt Bauer', trades: ['maler'], plz: '81541', city: 'München', rating: 4.9, reviews: 64, about: 'Innen- und Fassadenanstrich, Tapezierarbeiten, Lackierungen.', phone: '089 3456789' },
-    { id: 'h4', name: 'Holzkunst Wagner', trades: ['tischler'], plz: '85221', city: 'Dachau', rating: 4.7, reviews: 41, about: 'Möbel nach Maß, Küchen, Innentüren und Treppen.', phone: '08131 456789' },
-    { id: 'h5', name: 'Dach & Fassade Maier', trades: ['dach'], plz: '86150', city: 'Augsburg', rating: 4.5, reviews: 57, about: 'Dachsanierung, Dachfenster, Spenglerarbeiten und Reparaturen.', phone: '0821 567890' },
-    { id: 'h6', name: 'Fliesen Yilmaz', trades: ['fliesen'], plz: '80637', city: 'München', rating: 4.8, reviews: 73, about: 'Fliesen, Naturstein und barrierefreie Duschen.', phone: '089 6789012' },
-    { id: 'h7', name: 'Grünwerk Fischer', trades: ['garten'], plz: '82008', city: 'Unterhaching', rating: 4.4, reviews: 29, about: 'Gartengestaltung, Pflasterarbeiten, Baumpflege.', phone: '089 7890123' },
-    { id: 'h8', name: 'Schnell & Sicher Umzüge', trades: ['umzug'], plz: '10115', city: 'Berlin', rating: 4.3, reviews: 112, about: 'Privat- und Firmenumzüge, Möbelmontage, Entrümpelung.', phone: '030 8901234' },
-    { id: 'h9', name: 'Haustechnik Keller', trades: ['sanitaer', 'elektro'], plz: '10245', city: 'Berlin', rating: 4.6, reviews: 95, about: 'Sanitär, Heizung und Elektro aus einer Hand.', phone: '030 9012345' },
-  ],
-  jobs: [
-    { id: 'j1', title: 'Steckdosen im Wohnzimmer erneuern', trade: 'elektro', plz: '80333', description: '6 alte Steckdosen gegen neue tauschen, eine zusätzliche Doppelsteckdose setzen.', when: 'In den nächsten 2 Wochen', budget: 'bis 400 €', owner: 'other', created: Date.now() - 864e5 * 2, status: 'offen', offers: [] },
-    { id: 'j2', title: 'Wallbox in Garage installieren', trade: 'elektro', plz: '80999', description: '11 kW Wallbox vorhanden, Leitungsweg ca. 15 m vom Zählerschrank.', when: 'Flexibel', budget: '', owner: 'other', created: Date.now() - 864e5 * 5, status: 'offen', offers: [] },
-  ],
-};
-
-const STORE_KEY = 'mhp-state-v1';
-let state = load();
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (_) { /* ignore */ }
-  return structuredClone(SEED);
-}
-function save() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (_) { /* ignore */ }
-}
-
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const uid = (p) => p + Math.random().toString(36).slice(2, 9);
-const sameRegion = (a, b) => !a || !b || String(a).slice(0, 2) === String(b).slice(0, 2);
-const stars = (r) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r));
-const fmtDate = (ts) => new Date(ts).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const fmtDate = (v) => new Date(v).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const euro = (n) => Number(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
-const craftsman = (id) => state.craftsmen.find((c) => c.id === id);
-const job = (id) => state.jobs.find((j) => j.id === id);
+const enc = encodeURIComponent;
+const session = () => api.session;
+const profile = () => api.session?.profile;
+const isPro = () => profile()?.role === 'handwerker';
+const tradeTags = (ids) => ids.map((t) => `<span class="tag">${tradeById(t).emoji} ${esc(tradeById(t).name)}</span>`).join(' ');
+const tradeOptions = (sel, placeholder) => `<option value="">${placeholder}</option>` +
+  TRADES.map((t) => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${t.name}</option>`).join('');
+const STATUS = { offen: ['Offen', ''], vergeben: ['Vergeben', 'ok'], storniert: ['Storniert', 'muted-tag'] };
+const statusTag = (s) => `<span class="tag ${STATUS[s]?.[1] || ''}">${STATUS[s]?.[0] || esc(s)}</span>`;
 
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => el.classList.remove('show'), 2600);
+  toast.t = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
 /* ---------- Routing ---------- */
@@ -73,360 +33,533 @@ function parseHash() {
   const [path, query = ''] = (location.hash.slice(1) || '/').split('?');
   return { parts: path.split('/').filter(Boolean), q: new URLSearchParams(query) };
 }
-const go = (h) => { location.hash = h; };
+const go = (h) => { if (location.hash === h) render(); else location.hash = h; };
 
+// [View-Funktion, Login nötig?]
 const routes = {
-  '': home,
-  suche: search,
-  handwerker: craftsmanDetail,
-  'auftrag-neu': newJob,
-  'meine-auftraege': myJobs,
-  auftraege: openJobs,
-  auftrag: jobDetail,
-  profil: profile,
+  '': [home, false],
+  suche: [search, false],
+  handwerker: [craftsmanDetail, false],
+  login: [login, false],
+  registrieren: [register, false],
+  'passwort-neu': [newPassword, true],
+  'auftrag-neu': [newJob, true],
+  'meine-auftraege': [myJobs, true],
+  auftraege: [openJobs, true],
+  angebote: [myOffers, true],
+  auftrag: [jobDetail, true],
+  profil: [profileView, true],
+  impressum: [impressum, false],
+  datenschutz: [datenschutz, false],
 };
 
-function render() {
+let renderToken = 0;
+async function render() {
+  const token = ++renderToken;
   const { parts, q } = parseHash();
-  const view = routes[parts[0] || ''] || notFound;
-  document.getElementById('view').innerHTML = view(parts.slice(1), q);
-  renderChrome(parts[0] || '');
+  const name = parts[0] || '';
+  const [view, needsLogin] = routes[name] || [notFound, false];
+  renderChrome(name);
+  if (needsLogin && !session()) {
+    go(`#/login?next=${enc(location.hash)}`);
+    return;
+  }
+  const main = document.getElementById('view');
+  main.setAttribute('aria-busy', 'true');
+  let html;
+  try {
+    html = await view(parts.slice(1), q);
+  } catch (e) {
+    console.error(e);
+    html = `<div class="card empty"><h2>Das hat nicht geklappt</h2><p>${esc(e.message)}</p><button class="btn" onclick="render()">Erneut versuchen</button></div>`;
+  }
+  if (token !== renderToken) return; // inzwischen weiternavigiert
+  main.innerHTML = (IS_DEMO ? demoBanner() : '') + html;
+  main.removeAttribute('aria-busy');
   bind(parts, q);
   window.scrollTo(0, 0);
 }
 
 function renderChrome(current) {
-  const isPro = state.role === 'handwerker';
-  document.getElementById('roleToggle').textContent = isPro ? '🧰 Handwerker' : '👤 Kunde';
-  const tabs = isPro
-    ? [['', '🏠', 'Start'], ['auftraege', '📋', 'Aufträge'], ['profil', '🧰', 'Mein Betrieb']]
-    : [['', '🏠', 'Start'], ['suche', '🔎', 'Suchen'], ['auftrag-neu', '➕', 'Auftrag'], ['meine-auftraege', '📋', 'Meine'], ['profil', '👤', 'Profil']];
+  const btn = document.getElementById('topAction');
+  if (IS_DEMO) {
+    btn.textContent = isPro() ? '🧰 Handwerker' : '👤 Kunde';
+    btn.title = 'Demo: Rolle wechseln';
+    btn.onclick = () => { api.setRole(isPro() ? 'kunde' : 'handwerker'); toast(isPro() ? 'Handwerker-Ansicht' : 'Kunden-Ansicht'); go('#/'); };
+  } else if (session()) {
+    btn.textContent = (isPro() ? '🧰 ' : '👤 ') + (profile().name || 'Profil').split(' ')[0];
+    btn.title = 'Mein Profil';
+    btn.onclick = () => go('#/profil');
+  } else {
+    btn.textContent = 'Anmelden';
+    btn.title = '';
+    btn.onclick = () => go('#/login');
+  }
+  let tabs;
+  if (!session()) tabs = [['', '🏠', 'Start'], ['suche', '🔎', 'Suchen'], ['auftrag-neu', '➕', 'Auftrag'], ['login', '👤', 'Anmelden']];
+  else if (isPro()) tabs = [['', '🏠', 'Start'], ['auftraege', '📋', 'Aufträge'], ['angebote', '💬', 'Angebote'], ['profil', '🧰', 'Betrieb']];
+  else tabs = [['', '🏠', 'Start'], ['suche', '🔎', 'Suchen'], ['auftrag-neu', '➕', 'Auftrag'], ['meine-auftraege', '📋', 'Meine'], ['profil', '👤', 'Profil']];
   document.getElementById('tabbar').innerHTML = tabs
-    .map(([r, i, l]) => `<a href="#/${r}" class="${r === current ? 'active' : ''}"><span class="ico">${i}</span>${l}</a>`)
-    .join('');
+    .map(([r, i, l]) => `<a href="#/${r}" class="${r === current ? 'active' : ''}"><span class="ico">${i}</span>${l}</a>`).join('');
 }
 
-/* ---------- Views ---------- */
-function home() {
-  if (state.role === 'handwerker') {
-    const me = craftsman(state.myCraftsmanId);
-    const open = state.jobs.filter((j) => j.status === 'offen' && me.trades.includes(j.trade) && sameRegion(j.plz, me.plz));
+const demoBanner = () => '<div class="demo-banner">Demo-Modus · Daten nur auf diesem Gerät · Rolle oben rechts wechseln</div>';
+
+/* ---------- Seiten ---------- */
+async function home() {
+  if (session() && isPro()) {
+    const p = profile();
+    const incomplete = !p.trades?.length || !/^\d{5}$/.test(p.plz || '') || !p.name;
+    const jobs = incomplete ? [] : await api.openJobsForMe();
+    const fresh = jobs.filter((j) => !j.offerCount);
     return `
       <section class="hero">
-        <h1>Hallo ${esc(me.name)}</h1>
-        <p>${open.length} passende${open.length === 1 ? 'r' : ''} Auftrag${open.length === 1 ? '' : 'e'} in deiner Region warten auf ein Angebot.</p>
-        <a class="btn" href="#/auftraege">Aufträge ansehen</a>
+        <h1>Hallo ${esc(p.name || 'und willkommen')}</h1>
+        ${incomplete
+          ? '<p>Vervollständige dein Betriebsprofil (Name, PLZ, Gewerke), damit du passende Aufträge erhältst und in der Suche erscheinst.</p><a class="btn" href="#/profil">Profil vervollständigen</a>'
+          : `<p>${fresh.length} passende${fresh.length === 1 ? 'r' : ''} Auftrag${fresh.length === 1 ? '' : 'e'} in deiner Region ${fresh.length === 1 ? 'wartet' : 'warten'} auf ein Angebot.</p><a class="btn" href="#/auftraege">Aufträge ansehen</a>`}
       </section>
-      ${open.slice(0, 3).map(jobCard).join('') || '<div class="card empty">Aktuell keine offenen Aufträge.</div>'}`;
+      ${fresh.slice(0, 3).map(jobCard).join('') || (incomplete ? '' : '<div class="card empty">Aktuell keine neuen Aufträge.</div>')}`;
   }
+  const plz = profile()?.plz || '';
   return `
     <section class="hero">
       <h1>Den richtigen Handwerker finden</h1>
       <p>Auftrag beschreiben, Angebote aus deiner Region erhalten, den besten Betrieb auswählen.</p>
       <form class="search" id="heroSearch">
-        <select name="gewerk" aria-label="Gewerk">
-          <option value="">Alle Gewerke</option>
-          ${TRADES.map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}
-        </select>
-        <input name="plz" inputmode="numeric" maxlength="5" placeholder="PLZ" aria-label="Postleitzahl" value="${esc(state.me.plz)}">
+        <select name="gewerk" aria-label="Gewerk">${tradeOptions('', 'Alle Gewerke')}</select>
+        <input name="plz" inputmode="numeric" maxlength="5" placeholder="PLZ" aria-label="Postleitzahl" value="${esc(plz)}">
         <button class="btn" type="submit">Suchen</button>
       </form>
     </section>
-    <div class="row" style="margin-bottom:8px"><h2>Beliebte Gewerke</h2></div>
+    <h2>Beliebte Gewerke</h2>
     <div class="grid">
-      ${TRADES.map((t) => `<a class="card trade" href="#/suche?gewerk=${t.id}&plz=${esc(state.me.plz)}"><span class="emoji">${t.emoji}</span><strong>${t.name}</strong></a>`).join('')}
+      ${TRADES.map((t) => `<a class="card trade" href="#/suche?gewerk=${t.id}&plz=${enc(plz)}"><span class="emoji">${t.emoji}</span><strong>${t.name}</strong></a>`).join('')}
     </div>
     <div class="card" style="margin-top:12px">
       <h3>So funktioniert's</h3>
       <p class="muted">1. Auftrag kostenlos erstellen · 2. Angebote von Handwerkern erhalten · 3. Vergleichen und beauftragen</p>
       <a class="btn" href="#/auftrag-neu">Auftrag erstellen</a>
-    </div>`;
+    </div>
+    ${!session() ? '<div class="card"><h3>Du bist Handwerker?</h3><p class="muted">Registriere deinen Betrieb kostenlos und erhalte Aufträge aus deiner Region.</p><a class="btn secondary" href="#/registrieren?rolle=handwerker">Betrieb registrieren</a></div>' : ''}
+    ${legalLinks()}`;
 }
 
-function search(_, q) {
+async function search(_, q) {
   const gewerk = q.get('gewerk') || '';
   const plz = q.get('plz') || '';
-  const list = state.craftsmen
-    .filter((c) => !gewerk || c.trades.includes(gewerk))
-    .filter((c) => sameRegion(c.plz, plz))
-    .sort((a, b) => b.rating - a.rating);
+  const list = await api.searchCraftsmen({ trade: gewerk, plz });
   return `
     <h1>Handwerker finden</h1>
     <form class="card two" id="searchForm">
-      <div><label for="sg">Gewerk</label>
-        <select id="sg" name="gewerk"><option value="">Alle Gewerke</option>
-          ${TRADES.map((t) => `<option value="${t.id}" ${t.id === gewerk ? 'selected' : ''}>${t.name}</option>`).join('')}
-        </select></div>
+      <div><label for="sg">Gewerk</label><select id="sg" name="gewerk">${tradeOptions(gewerk, 'Alle Gewerke')}</select></div>
       <div><label for="sp">PLZ</label><input id="sp" name="plz" inputmode="numeric" maxlength="5" value="${esc(plz)}" placeholder="z. B. 80331"></div>
     </form>
-    <p class="muted">${list.length} Betrieb${list.length === 1 ? '' : 'e'} gefunden${plz ? ` im PLZ-Gebiet ${esc(plz.slice(0, 2))}xxx` : ''}</p>
-    ${list.map(craftsmanCard).join('') || `<div class="card empty">Keine Handwerker gefunden.<br><br><a class="btn" href="#/auftrag-neu?gewerk=${esc(gewerk)}">Trotzdem Auftrag erstellen</a></div>`}`;
+    <p class="muted">${list.length} Betrieb${list.length === 1 ? '' : 'e'} gefunden${plz.length >= 2 ? ` im PLZ-Gebiet ${esc(plz.slice(0, 2))}xxx` : ''}</p>
+    ${list.map(craftsmanCard).join('') || `<div class="card empty">Noch keine passenden Handwerker registriert.<br>Erstelle einen Auftrag – neue Betriebe in deiner Region sehen ihn sofort.<br><br><a class="btn" href="#/auftrag-neu?gewerk=${enc(gewerk)}">Auftrag erstellen</a></div>`}`;
 }
 
 function craftsmanCard(c) {
   return `
-    <a class="card" href="#/handwerker/${c.id}" style="display:block;text-decoration:none;color:inherit">
-      <div class="row"><h3 style="margin:0">${esc(c.name)}</h3><span><span class="stars">${stars(c.rating)}</span> <span class="muted">${c.rating.toFixed(1)} (${c.reviews})</span></span></div>
+    <a class="card link-card" href="#/handwerker/${enc(c.id)}">
+      <h3>${esc(c.name)}</h3>
       <p class="muted" style="margin:4px 0 8px">📍 ${esc(c.plz)} ${esc(c.city)}</p>
-      ${c.trades.map((t) => `<span class="tag">${tradeById(t).emoji} ${tradeById(t).name}</span>`).join(' ')}
+      ${tradeTags(c.trades)}
     </a>`;
 }
 
-function craftsmanDetail([id]) {
-  const c = craftsman(id);
+async function craftsmanDetail([id]) {
+  const c = await api.getCraftsman(id);
   if (!c) return notFound();
   return `
     <a href="javascript:history.back()" class="muted">← Zurück</a>
     <div class="card" style="margin-top:8px">
       <h1>${esc(c.name)}</h1>
-      <p><span class="stars">${stars(c.rating)}</span> ${c.rating.toFixed(1)} · ${c.reviews} Bewertungen</p>
-      <p class="muted">📍 ${esc(c.plz)} ${esc(c.city)} · ☎️ ${esc(c.phone)}</p>
-      <p>${c.trades.map((t) => `<span class="tag">${tradeById(t).emoji} ${tradeById(t).name}</span>`).join(' ')}</p>
-      <p>${esc(c.about)}</p>
-      <a class="btn block" href="#/auftrag-neu?gewerk=${c.trades[0]}&handwerker=${c.id}">Angebot anfragen</a>
+      <p class="muted">📍 ${esc(c.plz)} ${esc(c.city)}${c.phone ? ` · ☎️ <a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : ''}</p>
+      <p>${tradeTags(c.trades)}</p>
+      ${c.about ? `<p style="white-space:pre-line">${esc(c.about)}</p>` : ''}
+      ${session()?.user.id === c.id ? '<p class="muted">Das ist dein öffentliches Profil.</p>' : `<a class="btn block" href="#/auftrag-neu?gewerk=${enc(c.trades[0] || '')}&handwerker=${enc(c.id)}">Angebot anfragen</a>`}
     </div>`;
 }
 
-function newJob(_, q) {
-  const target = craftsman(q.get('handwerker'));
-  const g = q.get('gewerk') || '';
+/* ----- Anmeldung ----- */
+function login(_, q) {
+  if (IS_DEMO) return '<div class="card empty"><h2>Demo-Modus</h2><p>Im Demo-Modus ist keine Anmeldung nötig. Sobald Supabase eingerichtet ist (siehe README), erscheint hier der Login.</p><a class="btn" href="#/">Zur Startseite</a></div>';
+  if (session()) { setTimeout(() => go(q.get('next') || '#/'), 0); return ''; }
+  return `
+    <h1>Anmelden</h1>
+    <form class="card" id="loginForm">
+      <label for="le">E-Mail</label><input id="le" name="email" type="email" autocomplete="email" required>
+      <label for="lp">Passwort</label><input id="lp" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn block" type="submit">Anmelden</button>
+      <button class="link-btn" type="button" id="forgotBtn">Passwort vergessen?</button>
+    </form>
+    <p class="center">Noch kein Konto? <a href="#/registrieren${q.get('next') ? `?next=${enc(q.get('next'))}` : ''}">Jetzt registrieren</a></p>`;
+}
+
+function register(_, q) {
+  if (IS_DEMO) return login(_, q);
+  const role = q.get('rolle') === 'handwerker' ? 'handwerker' : 'kunde';
+  return `
+    <h1>Konto erstellen</h1>
+    <form class="card" id="registerForm">
+      <fieldset class="choice">
+        <legend>Ich bin …</legend>
+        <label><input type="radio" name="role" value="kunde" ${role === 'kunde' ? 'checked' : ''}><span><strong>👤 Kunde</strong><small>Ich suche einen Handwerker</small></span></label>
+        <label><input type="radio" name="role" value="handwerker" ${role === 'handwerker' ? 'checked' : ''}><span><strong>🧰 Handwerker</strong><small>Ich biete meine Leistungen an</small></span></label>
+      </fieldset>
+      <label for="rn" id="rnLabel">${role === 'handwerker' ? 'Firmenname' : 'Name'}</label><input id="rn" name="name" required maxlength="120" autocomplete="name">
+      <div class="two">
+        <div><label for="re">E-Mail</label><input id="re" name="email" type="email" required autocomplete="email"></div>
+        <div><label for="rp">PLZ</label><input id="rp" name="plz" inputmode="numeric" pattern="\\d{5}" maxlength="5" required></div>
+      </div>
+      <label for="rw">Passwort (mind. 8 Zeichen)</label><input id="rw" name="password" type="password" minlength="8" required autocomplete="new-password">
+      <label class="check"><input type="checkbox" required><span>Ich habe die <a href="#/datenschutz" target="_blank">Datenschutzerklärung</a> gelesen und stimme ihr zu.</span></label>
+      <button class="btn block" type="submit">Registrieren</button>
+    </form>
+    <p class="center">Schon registriert? <a href="#/login${q.get('next') ? `?next=${enc(q.get('next'))}` : ''}">Anmelden</a></p>`;
+}
+
+function newPassword() {
+  return `
+    <h1>Neues Passwort</h1>
+    <form class="card" id="pwForm">
+      <label for="np">Neues Passwort (mind. 8 Zeichen)</label>
+      <input id="np" name="password" type="password" minlength="8" required autocomplete="new-password">
+      <button class="btn block" type="submit">Passwort speichern</button>
+    </form>`;
+}
+
+/* ----- Aufträge (Kunde) ----- */
+async function newJob(_, q) {
+  const target = q.get('handwerker') ? await api.getCraftsman(q.get('handwerker')) : null;
+  if (isPro()) return '<div class="card empty"><h2>Nur für Kunden</h2><p>Mit einem Handwerker-Konto kannst du keine Aufträge erstellen.</p></div>';
   return `
     <h1>Auftrag erstellen</h1>
     ${target ? `<p class="muted">Anfrage geht direkt an <strong>${esc(target.name)}</strong> und an weitere passende Betriebe.</p>` : '<p class="muted">Beschreibe dein Vorhaben – passende Handwerker aus deiner Region senden dir Angebote.</p>'}
     <form class="card" id="jobForm">
       <label for="jt">Was soll gemacht werden?</label>
-      <input id="jt" name="title" required maxlength="80" placeholder="z. B. Bad neu fliesen">
+      <input id="jt" name="title" required minlength="3" maxlength="80" placeholder="z. B. Bad neu fliesen">
       <div class="two">
-        <div><label for="jg">Gewerk</label>
-          <select id="jg" name="trade" required>
-            <option value="">Bitte wählen</option>
-            ${TRADES.map((t) => `<option value="${t.id}" ${t.id === g ? 'selected' : ''}>${t.name}</option>`).join('')}
-          </select></div>
-        <div><label for="jp">PLZ des Einsatzorts</label><input id="jp" name="plz" required inputmode="numeric" pattern="\\d{5}" maxlength="5" value="${esc(state.me.plz)}"></div>
+        <div><label for="jg">Gewerk</label><select id="jg" name="trade" required>${tradeOptions(q.get('gewerk') || '', 'Bitte wählen')}</select></div>
+        <div><label for="jp">PLZ des Einsatzorts</label><input id="jp" name="plz" required inputmode="numeric" pattern="\\d{5}" maxlength="5" value="${esc(profile()?.plz || '')}"></div>
       </div>
       <label for="jd">Beschreibung</label>
-      <textarea id="jd" name="description" required placeholder="Größe, Material, Zustand, Besonderheiten …"></textarea>
+      <textarea id="jd" name="description" required minlength="5" maxlength="5000" placeholder="Größe, Material, Zustand, Besonderheiten …"></textarea>
       <div class="two">
         <div><label for="jw">Zeitraum</label>
           <select id="jw" name="when"><option>So schnell wie möglich</option><option>In den nächsten 2 Wochen</option><option>Innerhalb von 3 Monaten</option><option>Flexibel</option></select></div>
-        <div><label for="jb">Budget (optional)</label><input id="jb" name="budget" placeholder="z. B. bis 2.000 €"></div>
+        <div><label for="jb">Budget (optional)</label><input id="jb" name="budget" maxlength="80" placeholder="z. B. bis 2.000 €"></div>
       </div>
-      <input type="hidden" name="direct" value="${target ? esc(target.id) : ''}">
+      <input type="hidden" name="directId" value="${target ? esc(target.id) : ''}">
+      <p class="muted small">Deine Kontaktdaten sieht nur der Handwerker, den du beauftragst.</p>
       <button class="btn block" type="submit">Auftrag veröffentlichen</button>
     </form>`;
 }
 
 function jobCard(j) {
   const t = tradeById(j.trade);
-  const n = j.offers.length;
+  let badge;
+  if (j.status !== 'offen') badge = statusTag(j.status);
+  else if (isPro()) badge = j.offerCount ? '<span class="tag ok">Angebot gesendet</span>' : j.directId === session()?.user.id ? '<span class="tag">Direktanfrage</span>' : '<span class="tag">Neu</span>';
+  else badge = `<span class="tag">${j.offerCount ? `${j.offerCount} Angebot${j.offerCount === 1 ? '' : 'e'}` : 'Offen'}</span>`;
   return `
-    <a class="card" href="#/auftrag/${j.id}" style="display:block;text-decoration:none;color:inherit">
-      <div class="row"><h3 style="margin:0">${esc(j.title)}</h3>
-        <span class="tag ${j.status === 'vergeben' ? 'ok' : ''}">${j.status === 'vergeben' ? 'Vergeben' : n ? `${n} Angebot${n === 1 ? '' : 'e'}` : 'Offen'}</span></div>
-      <p class="muted" style="margin:4px 0 0">${t.emoji} ${t.name} · 📍 ${esc(j.plz)} · ${fmtDate(j.created)}</p>
+    <a class="card link-card" href="#/auftrag/${enc(j.id)}">
+      <div class="row"><h3>${esc(j.title)}</h3>${badge}</div>
+      <p class="muted" style="margin:4px 0 0">${t.emoji} ${esc(t.name)} · 📍 ${esc(j.plz)} · ${fmtDate(j.created)}</p>
     </a>`;
 }
 
-function myJobs() {
-  const mine = state.jobs.filter((j) => j.owner === 'me').sort((a, b) => b.created - a.created);
+async function myJobs() {
+  if (isPro()) { setTimeout(() => go('#/auftraege'), 0); return ''; }
+  const mine = await api.myJobs();
   return `
     <div class="row"><h1>Meine Aufträge</h1><a class="btn small" href="#/auftrag-neu">+ Neu</a></div>
     ${mine.map(jobCard).join('') || '<div class="card empty">Du hast noch keine Aufträge erstellt.<br><br><a class="btn" href="#/auftrag-neu">Ersten Auftrag erstellen</a></div>'}`;
 }
 
-function openJobs() {
-  const me = craftsman(state.myCraftsmanId);
-  const list = state.jobs
-    .filter((j) => j.status === 'offen' && me.trades.includes(j.trade) && sameRegion(j.plz, me.plz))
-    .sort((a, b) => b.created - a.created);
+/* ----- Aufträge (Handwerker) ----- */
+async function openJobs() {
+  if (!isPro()) { setTimeout(() => go('#/meine-auftraege'), 0); return ''; }
+  const p = profile();
+  const list = await api.openJobsForMe();
   return `
     <h1>Aufträge in deiner Region</h1>
-    <p class="muted">Passend zu: ${me.trades.map((t) => tradeById(t).name).join(', ')} · PLZ-Gebiet ${esc(me.plz.slice(0, 2))}xxx</p>
-    ${list.map(jobCard).join('') || '<div class="card empty">Aktuell keine passenden Aufträge.</div>'}`;
+    <p class="muted">${p.trades?.length ? `Passend zu: ${p.trades.map((t) => esc(tradeById(t).name)).join(', ')}` : 'Keine Gewerke hinterlegt'}${p.plz ? ` · PLZ-Gebiet ${esc(p.plz.slice(0, 2))}xxx` : ''} · <a href="#/profil">ändern</a></p>
+    ${list.map(jobCard).join('') || '<div class="card empty">Aktuell keine passenden Aufträge. Neue Aufträge erscheinen hier automatisch.</div>'}`;
 }
 
-function jobDetail([id]) {
-  const j = job(id);
+async function myOffers() {
+  const list = await api.myOffers();
+  return `
+    <h1>Meine Angebote</h1>
+    ${list.map((o) => {
+      const won = o.job?.acceptedOffer === o.id;
+      const tag = won ? '<span class="tag ok">✓ Beauftragt</span>' : o.job?.status === 'offen' ? '<span class="tag">Wartet</span>' : '<span class="tag muted-tag">Nicht gewählt</span>';
+      return `<a class="card link-card" href="#/auftrag/${enc(o.jobId)}">
+        <div class="row"><h3>${esc(o.job?.title || 'Auftrag')}</h3>${tag}</div>
+        <p class="muted" style="margin:4px 0 0">${euro(o.price)} · ab ${fmtDate(o.date)} · gesendet am ${fmtDate(o.created)}</p></a>`;
+    }).join('') || '<div class="card empty">Du hast noch keine Angebote abgegeben.<br><br><a class="btn" href="#/auftraege">Aufträge ansehen</a></div>'}`;
+}
+
+/* ----- Auftragsdetail ----- */
+async function jobDetail([id]) {
+  const j = await api.getJob(id);
   if (!j) return notFound();
   const t = tradeById(j.trade);
-  const isPro = state.role === 'handwerker';
-  const myOffer = j.offers.find((o) => o.craftsmanId === state.myCraftsmanId);
+  const uid = session().user.id;
+  const isOwner = j.ownerId === uid;
+  const myOffer = j.offers.find((o) => o.craftsmanId === uid);
+  let extra = '';
 
-  let offersHtml = '';
-  if (!isPro && j.owner === 'me') {
-    offersHtml = `
+  if (isOwner) {
+    extra = `
       <div class="card"><h2>Angebote (${j.offers.length})</h2>
         ${j.offers.length ? j.offers.map((o) => {
-          const c = craftsman(o.craftsmanId);
+          const c = o.craftsman || { name: 'Handwerker', phone: '' };
           const accepted = j.acceptedOffer === o.id;
           return `<div class="offer">
-            <div class="row"><strong><a href="#/handwerker/${c.id}">${esc(c.name)}</a></strong><strong>${euro(o.price)}</strong></div>
-            <p class="muted" style="margin:2px 0 6px"><span class="stars">${stars(c.rating)}</span> ${c.rating.toFixed(1)} · ${esc(o.date)}</p>
-            <p>${esc(o.message)}</p>
-            ${accepted ? '<span class="tag ok">✓ Beauftragt</span>' : j.status === 'offen' ? `<button class="btn small" data-accept="${o.id}">Angebot annehmen</button>` : ''}
+            <div class="row"><strong><a href="#/handwerker/${enc(o.craftsmanId)}">${esc(c.name)}</a></strong><strong>${euro(o.price)}</strong></div>
+            <p class="muted" style="margin:2px 0 6px">Frühester Termin: ${fmtDate(o.date)}${c.city ? ` · 📍 ${esc(c.city)}` : ''}</p>
+            <p style="white-space:pre-line">${esc(o.message)}</p>
+            ${accepted ? `<span class="tag ok">✓ Beauftragt</span>${c.phone ? ` <a class="btn small secondary" href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">☎️ ${esc(c.phone)}</a>` : ''}`
+              : j.status === 'offen' ? `<button class="btn small" data-accept="${esc(o.id)}">Angebot annehmen</button>` : ''}
           </div>`;
-        }).join('') : '<p class="muted">Noch keine Angebote. Du wirst benachrichtigt, sobald Handwerker antworten.</p><p class="muted"><em>Demo-Tipp:</em> Oben rechts in den Handwerker-Modus wechseln und selbst ein Angebot abgeben.</p>'}
-      </div>`;
-  }
-
-  let proHtml = '';
-  if (isPro) {
-    proHtml = myOffer
-      ? `<div class="card"><h2>Dein Angebot</h2><p><strong>${euro(myOffer.price)}</strong> · ${esc(myOffer.date)}</p><p>${esc(myOffer.message)}</p>
-         ${j.acceptedOffer === myOffer.id ? '<span class="tag ok">✓ Du wurdest beauftragt</span>' : '<span class="tag">Wartet auf Rückmeldung</span>'}</div>`
-      : j.status === 'offen'
-        ? `<form class="card" id="offerForm"><h2>Angebot abgeben</h2>
-            <div class="two">
-              <div><label for="op">Preis (brutto, €)</label><input id="op" name="price" type="number" min="1" step="1" required></div>
-              <div><label for="od">Frühester Termin</label><input id="od" name="date" type="date" required></div>
-            </div>
-            <label for="om">Nachricht an den Kunden</label>
-            <textarea id="om" name="message" required placeholder="Leistungsumfang, Material, Rückfragen …"></textarea>
-            <button class="btn block" type="submit">Angebot senden</button></form>`
-        : '<div class="card empty">Dieser Auftrag wurde bereits vergeben.</div>';
+        }).join('') : `<p class="muted">Noch keine Angebote. Passende Handwerker aus deiner Region sehen deinen Auftrag jetzt.</p>${IS_DEMO ? '<p class="muted"><em>Demo-Tipp:</em> Oben rechts in die Handwerker-Ansicht wechseln und selbst ein Angebot abgeben.</p>' : ''}`}
+      </div>
+      ${j.status === 'offen' ? '<button class="btn secondary block" id="cancelJob">Auftrag zurückziehen</button>' : ''}`;
+  } else if (isPro()) {
+    if (myOffer) {
+      const won = j.acceptedOffer === myOffer.id;
+      extra = `<div class="card"><h2>Dein Angebot</h2>
+        <p><strong>${euro(myOffer.price)}</strong> · frühester Termin ${fmtDate(myOffer.date)}</p>
+        <p style="white-space:pre-line">${esc(myOffer.message)}</p>
+        ${won ? '<span class="tag ok">✓ Du wurdest beauftragt</span>' : j.status === 'offen' ? `<span class="tag">Wartet auf Rückmeldung</span> <button class="link-btn" data-withdraw="${esc(myOffer.id)}">Angebot zurückziehen</button>` : '<span class="tag muted-tag">Ein anderer Betrieb wurde beauftragt</span>'}
+      </div>
+      ${won && j.client ? `<div class="card"><h2>Kontakt zum Kunden</h2>
+        <p><strong>${esc(j.client.name || 'Kunde')}</strong></p>
+        ${j.client.email ? `<p>✉️ <a href="mailto:${esc(j.client.email)}">${esc(j.client.email)}</a></p>` : ''}
+        ${j.client.phone ? `<p>☎️ <a href="tel:${esc(j.client.phone.replace(/[^\d+]/g, ''))}">${esc(j.client.phone)}</a></p>` : ''}
+      </div>` : ''}`;
+    } else if (j.status === 'offen') {
+      const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+      extra = `<form class="card" id="offerForm"><h2>Angebot abgeben</h2>
+        <div class="two">
+          <div><label for="op">Preis (brutto, €)</label><input id="op" name="price" type="number" min="1" step="0.01" required></div>
+          <div><label for="od">Frühester Termin</label><input id="od" name="date" type="date" min="${tomorrow}" required></div>
+        </div>
+        <label for="om">Nachricht an den Kunden</label>
+        <textarea id="om" name="message" required maxlength="3000" placeholder="Leistungsumfang, Material, Rückfragen …"></textarea>
+        <button class="btn block" type="submit">Angebot senden</button></form>`;
+    } else {
+      extra = '<div class="card empty">Dieser Auftrag ist nicht mehr offen.</div>';
+    }
   }
 
   return `
     <a href="javascript:history.back()" class="muted">← Zurück</a>
     <div class="card" style="margin-top:8px">
-      <div class="row"><h1 style="margin:0">${esc(j.title)}</h1><span class="tag ${j.status === 'vergeben' ? 'ok' : ''}">${j.status === 'vergeben' ? 'Vergeben' : 'Offen'}</span></div>
-      <p class="muted" style="margin-top:6px">${t.emoji} ${t.name} · 📍 ${esc(j.plz)} · erstellt am ${fmtDate(j.created)}</p>
+      <div class="row"><h1 style="margin:0">${esc(j.title)}</h1>${statusTag(j.status)}</div>
+      <p class="muted" style="margin-top:6px">${t.emoji} ${esc(t.name)} · 📍 ${esc(j.plz)} · erstellt am ${fmtDate(j.created)}</p>
       <p style="white-space:pre-line">${esc(j.description)}</p>
       <p class="muted">🗓 ${esc(j.when)}${j.budget ? ` · 💶 ${esc(j.budget)}` : ''}</p>
     </div>
-    ${offersHtml}${proHtml}`;
+    ${extra}`;
 }
 
-function profile() {
-  if (state.role === 'handwerker') {
-    const c = craftsman(state.myCraftsmanId);
-    return `
-      <h1>Mein Betrieb</h1>
-      <form class="card" id="proForm">
-        <label for="pn">Firmenname</label><input id="pn" name="name" value="${esc(c.name)}" required>
-        <div class="two">
-          <div><label for="pp">PLZ</label><input id="pp" name="plz" value="${esc(c.plz)}" inputmode="numeric" pattern="\\d{5}" maxlength="5" required></div>
-          <div><label for="pc">Ort</label><input id="pc" name="city" value="${esc(c.city)}" required></div>
-        </div>
-        <label>Gewerke</label>
-        <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px">
-          ${TRADES.map((t) => `<label style="font-weight:400;margin:0;display:flex;gap:8px;align-items:center"><input type="checkbox" name="trades" value="${t.id}" style="width:auto" ${c.trades.includes(t.id) ? 'checked' : ''}> ${t.name}</label>`).join('')}
-        </div>
-        <label for="pa">Über uns</label><textarea id="pa" name="about">${esc(c.about)}</textarea>
-        <button class="btn block" type="submit">Speichern</button>
-      </form>
-      ${resetCard()}`;
-  }
+/* ----- Profil ----- */
+function profileView() {
+  const p = profile();
+  const pro = isPro();
   return `
-    <h1>Mein Profil</h1>
-    <form class="card" id="meForm">
-      <label for="mn">Name</label><input id="mn" name="name" value="${esc(state.me.name)}" required>
-      <label for="me">E-Mail</label><input id="me" name="email" type="email" value="${esc(state.me.email)}">
-      <label for="mp">PLZ</label><input id="mp" name="plz" value="${esc(state.me.plz)}" inputmode="numeric" pattern="\\d{5}" maxlength="5">
+    <h1>${pro ? 'Mein Betrieb' : 'Mein Profil'}</h1>
+    <form class="card" id="profileForm">
+      <label for="pn">${pro ? 'Firmenname' : 'Name'}</label><input id="pn" name="name" value="${esc(p.name)}" required maxlength="120">
+      ${!IS_DEMO ? `<label>E-Mail</label><input value="${esc(session().user.email)}" disabled>` : ''}
+      <div class="two">
+        <div><label for="pp">PLZ</label><input id="pp" name="plz" value="${esc(p.plz || '')}" inputmode="numeric" pattern="\\d{5}" maxlength="5" ${pro ? 'required' : ''}></div>
+        <div><label for="pc">Ort</label><input id="pc" name="city" value="${esc(p.city || '')}" maxlength="80" ${pro ? 'required' : ''}></div>
+      </div>
+      <label for="pt">Telefon ${pro ? '(öffentlich sichtbar)' : '(nur für beauftragte Handwerker)'}</label>
+      <input id="pt" name="phone" type="tel" value="${esc(p.phone || '')}" maxlength="40">
+      ${pro ? `
+        <label>Gewerke</label>
+        <div class="checks">${TRADES.map((t) => `<label class="check"><input type="checkbox" name="trades" value="${t.id}" ${p.trades?.includes(t.id) ? 'checked' : ''}> ${t.name}</label>`).join('')}</div>
+        <label for="pa">Über uns</label><textarea id="pa" name="about" maxlength="2000">${esc(p.about || '')}</textarea>` : ''}
       <button class="btn block" type="submit">Speichern</button>
     </form>
-    <div class="card"><h3>Bist du Handwerker?</h3><p class="muted">Erhalte Aufträge aus deiner Region und sende Angebote direkt aus der App.</p>
-      <button class="btn secondary" data-role="handwerker">Zum Handwerker-Modus wechseln</button></div>
-    ${resetCard()}`;
+    ${pro ? `<a class="btn secondary block" href="#/handwerker/${enc(session().user.id)}">Öffentliches Profil ansehen</a>` : ''}
+    ${IS_DEMO
+      ? '<div class="card" style="margin-top:12px"><h3>Demo-Daten</h3><p class="muted">Alle Daten liegen nur auf diesem Gerät.</p><button class="btn secondary" id="resetBtn">Demo zurücksetzen</button></div>'
+      : '<button class="btn secondary block" id="logoutBtn" style="margin-top:12px">Abmelden</button>'}
+    ${legalLinks()}`;
 }
 
-const resetCard = () => `<div class="card"><h3>Demo-Daten</h3><p class="muted">Alle Daten werden aktuell nur auf diesem Gerät gespeichert.</p><button class="btn secondary" id="resetBtn">Demo zurücksetzen</button></div>`;
+/* ----- Rechtliches (Platzhalter – vor dem Start ausfüllen!) ----- */
+const legalLinks = () => '<p class="center small muted" style="margin-top:20px"><a href="#/impressum">Impressum</a> · <a href="#/datenschutz">Datenschutz</a></p>';
+function impressum() { return `<div class="card"><h1>Impressum</h1><p class="muted">Angaben gemäß § 5 DDG</p>
+  <p><strong>[Name / Firma]</strong><br>[Straße Hausnummer]<br>[PLZ Ort]</p>
+  <p>E-Mail: [kontakt@meinhandwerkerportal.com]<br>Telefon: [Telefonnummer]</p>
+  <p class="muted small">Platzhalter – bitte vor dem Livegang mit den echten Angaben ersetzen.</p></div>`; }
+function datenschutz() { return `<div class="card"><h1>Datenschutzerklärung</h1>
+  <p>Verantwortlich: siehe <a href="#/impressum">Impressum</a>.</p>
+  <h3>Welche Daten wir verarbeiten</h3>
+  <p>Konto (E-Mail, Name, PLZ, optional Telefon), Aufträge und Angebote, die du einstellst. Kontaktdaten von Kunden sind nur für den beauftragten Handwerker sichtbar. Profile von Handwerkern sind öffentlich.</p>
+  <h3>Hosting</h3>
+  <p>Datenbank und Anmeldung: Supabase (Serverstandort EU/Frankfurt). Webseite: GitHub Pages.</p>
+  <h3>Deine Rechte</h3>
+  <p>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch – formlos per E-Mail an die im Impressum genannte Adresse.</p>
+  <p class="muted small">Platzhalter – bitte vor dem Livegang rechtlich prüfen lassen bzw. mit einem Generator erstellen.</p></div>`; }
 const notFound = () => '<div class="card empty"><h2>Seite nicht gefunden</h2><a class="btn" href="#/">Zur Startseite</a></div>';
 
-/* ---------- Event-Bindings ---------- */
+/* ---------- Formulare & Buttons ---------- */
 function formData(form) {
   const fd = new FormData(form);
-  const o = Object.fromEntries(fd.entries());
-  o._all = (k) => fd.getAll(k);
+  const o = {};
+  for (const [k, v] of fd.entries()) o[k] = typeof v === 'string' ? v.trim() : v;
+  o.$all = (k) => fd.getAll(k);
   return o;
 }
 
-function bind() {
-  const $ = (s) => document.querySelector(s);
-
-  $('#heroSearch')?.addEventListener('submit', (e) => {
+// Formular absenden mit Ladezustand und Fehlermeldung
+function onSubmit(sel, handler) {
+  const form = document.querySelector(sel);
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const d = formData(e.target);
-    go(`#/suche?gewerk=${encodeURIComponent(d.gewerk)}&plz=${encodeURIComponent(d.plz)}`);
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try { await handler(formData(form), form); } catch (err) { toast(err.message); } finally { btn.disabled = false; }
   });
+}
+async function action(fn) { try { await fn(); } catch (err) { toast(err.message); } }
+
+function bind(parts, q) {
+  const $ = (s) => document.querySelector(s);
+  const jobId = parts[1];
+
+  onSubmit('#heroSearch', (d) => go(`#/suche?gewerk=${enc(d.gewerk)}&plz=${enc(d.plz)}`));
 
   const sf = $('#searchForm');
   if (sf) {
-    const upd = () => { const d = formData(sf); history.replaceState(null, '', `#/suche?gewerk=${encodeURIComponent(d.gewerk)}&plz=${encodeURIComponent(d.plz)}`); render(); };
+    const upd = () => { const d = formData(sf); go(`#/suche?gewerk=${enc(d.gewerk)}&plz=${enc(d.plz)}`); };
     sf.gewerk.addEventListener('change', upd);
     sf.plz.addEventListener('change', upd);
     sf.addEventListener('submit', (e) => { e.preventDefault(); upd(); });
   }
 
-  $('#jobForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const d = formData(e.target);
-    const j = { id: uid('j'), title: d.title.trim(), trade: d.trade, plz: d.plz, description: d.description.trim(), when: d.when, budget: d.budget.trim(), owner: 'me', direct: d.direct || null, created: Date.now(), status: 'offen', offers: [] };
-    state.jobs.push(j);
-    save();
-    toast('Auftrag veröffentlicht ✓');
-    go(`#/auftrag/${j.id}`);
+  onSubmit('#loginForm', async (d) => {
+    await api.signIn(d);
+    toast('Willkommen zurück!');
+    go(q.get('next') || '#/');
+  });
+  $('#forgotBtn')?.addEventListener('click', () => action(async () => {
+    const email = $('#le').value.trim();
+    if (!email) { toast('Bitte zuerst deine E-Mail-Adresse eintragen.'); $('#le').focus(); return; }
+    await api.resetPassword(email);
+    toast('Falls ein Konto existiert, haben wir dir einen Link geschickt.');
+  }));
+
+  const rf = $('#registerForm');
+  rf?.querySelectorAll('input[name=role]').forEach((r) => r.addEventListener('change', () => {
+    $('#rnLabel').textContent = rf.role.value === 'handwerker' ? 'Firmenname' : 'Name';
+  }));
+  onSubmit('#registerForm', async (d) => {
+    const { needsConfirmation } = await api.signUp(d);
+    if (needsConfirmation) {
+      document.getElementById('view').innerHTML = `<div class="card empty"><h2>Fast geschafft! 📬</h2>
+        <p>Wir haben eine Bestätigungsmail an <strong>${esc(d.email)}</strong> geschickt.<br>Klicke auf den Link darin, um dein Konto zu aktivieren.</p></div>`;
+      return;
+    }
+    toast('Konto erstellt ✓');
+    go(d.role === 'handwerker' ? '#/profil' : (q.get('next') || '#/'));
   });
 
-  $('#offerForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const { parts } = parseHash();
-    const j = job(parts[1]);
-    const d = formData(e.target);
-    j.offers.push({ id: uid('o'), craftsmanId: state.myCraftsmanId, price: Number(d.price), date: new Date(d.date).toLocaleDateString('de-DE'), message: d.message.trim(), created: Date.now() });
-    save();
+  onSubmit('#pwForm', async (d) => {
+    await api.updatePassword(d.password);
+    toast('Passwort geändert ✓');
+    go('#/');
+  });
+
+  onSubmit('#jobForm', async (d) => {
+    const job = await api.createJob(d);
+    toast('Auftrag veröffentlicht ✓');
+    go(`#/auftrag/${job.id}`);
+  });
+
+  onSubmit('#offerForm', async (d) => {
+    await api.createOffer(jobId, { price: Number(d.price), date: d.date, message: d.message });
     toast('Angebot gesendet ✓');
     render();
   });
 
-  document.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', () => {
-    const { parts } = parseHash();
-    const j = job(parts[1]);
-    if (!confirm('Dieses Angebot verbindlich annehmen?')) return;
-    j.acceptedOffer = b.dataset.accept;
-    j.status = 'vergeben';
-    save();
+  document.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', () => action(async () => {
+    if (!confirm('Dieses Angebot verbindlich annehmen? Der Handwerker erhält dann deine Kontaktdaten.')) return;
+    await api.acceptOffer(jobId, b.dataset.accept);
     toast('Handwerker beauftragt ✓');
+    render();
+  })));
+
+  document.querySelectorAll('[data-withdraw]').forEach((b) => b.addEventListener('click', () => action(async () => {
+    if (!confirm('Angebot wirklich zurückziehen?')) return;
+    await api.withdrawOffer(b.dataset.withdraw);
+    toast('Angebot zurückgezogen');
+    render();
+  })));
+
+  $('#cancelJob')?.addEventListener('click', () => action(async () => {
+    if (!confirm('Auftrag zurückziehen? Handwerker können dann keine Angebote mehr abgeben.')) return;
+    await api.cancelJob(jobId);
+    toast('Auftrag zurückgezogen');
     render();
   }));
 
-  $('#meForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const d = formData(e.target);
-    state.me = { name: d.name.trim(), email: d.email.trim(), plz: d.plz.trim() };
-    save(); toast('Gespeichert ✓');
+  onSubmit('#profileForm', async (d) => {
+    const fields = { name: d.name, plz: d.plz, city: d.city, phone: d.phone };
+    if (isPro()) {
+      fields.trades = d.$all('trades');
+      fields.about = d.about;
+      if (!fields.trades.length) throw new Error('Bitte mindestens ein Gewerk wählen.');
+    }
+    await api.updateProfile(fields);
+    toast('Gespeichert ✓');
+    renderChrome(parts[0]);
   });
 
-  $('#proForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const d = formData(e.target);
-    const trades = d._all('trades');
-    if (!trades.length) { toast('Bitte mindestens ein Gewerk wählen'); return; }
-    Object.assign(craftsman(state.myCraftsmanId), { name: d.name.trim(), plz: d.plz.trim(), city: d.city.trim(), about: d.about.trim(), trades });
-    save(); toast('Gespeichert ✓');
-  });
-
-  document.querySelectorAll('[data-role]').forEach((b) => b.addEventListener('click', () => setRole(b.dataset.role)));
+  $('#logoutBtn')?.addEventListener('click', () => action(async () => {
+    await api.signOut();
+    toast('Abgemeldet');
+    go('#/');
+  }));
 
   $('#resetBtn')?.addEventListener('click', () => {
     if (!confirm('Alle Demo-Daten auf diesem Gerät zurücksetzen?')) return;
-    state = structuredClone(SEED); save(); toast('Zurückgesetzt'); go('#/');
-    render();
+    api.reset(); toast('Zurückgesetzt'); go('#/');
   });
 }
 
-function setRole(role) {
-  state.role = role;
-  save();
-  toast(role === 'handwerker' ? 'Handwerker-Modus aktiv' : 'Kunden-Modus aktiv');
-  const { parts } = parseHash();
-  if (parts[0] === 'auftrag') render(); else go('#/');
-  render();
-}
+/* ---------- Start ---------- */
+(async function start() {
+  // Rücksprung aus Bestätigungs-/Passwort-Mails: Supabase hängt Tokens an die URL (#access_token=…)
+  const authHash = new URLSearchParams(location.hash.startsWith('#/') ? '' : location.hash.slice(1));
+  const authType = authHash.get('type');
+  const authError = authHash.get('error_description');
 
-document.getElementById('roleToggle').addEventListener('click', () => setRole(state.role === 'handwerker' ? 'kunde' : 'handwerker'));
-window.addEventListener('hashchange', render);
-render();
+  await api.init((event) => {
+    if (event === 'PASSWORD_RECOVERY') go('#/passwort-neu');
+    else if (event === 'SIGNED_OUT') render();
+    else renderChrome(parseHash().parts[0] || ''); // z. B. Token-Erneuerung: Formulare nicht verwerfen
+  });
+
+  if (authHash.has('access_token') || authError) {
+    history.replaceState(null, '', location.pathname + (authType === 'recovery' ? '#/passwort-neu' : '#/'));
+    if (authError) toast(authError.replace(/\+/g, ' '));
+    else if (authType === 'signup') toast('E-Mail bestätigt – willkommen! ✓');
+  }
+
+  window.addEventListener('hashchange', render);
+  render();
+})();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
