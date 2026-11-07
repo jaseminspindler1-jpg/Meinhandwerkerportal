@@ -3,6 +3,6 @@
 // die Datenbank ist über Row Level Security (supabase/schema.sql) geschützt.
 // Solange die Werte leer sind, läuft die App im Demo-Modus (Daten nur im Browser).
 window.MHP_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://ameomchsdgkfoeuplwtw.supabase.co',
+  supabaseAnonKey: 'sb_publishable_YFgqWpCj-euDPxWEp6MHkg_9SBEm9jq',
 };
