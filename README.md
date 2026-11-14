@@ -50,7 +50,29 @@ Backend mit Beispieldaten, die nur im Browser gespeichert werden.
    - `CNAME` für `www` → `jaseminspindler1-jpg.github.io`
 4. In den Pages-Einstellungen „Enforce HTTPS“ aktivieren (nötig für Login und App-Installation).
 
+## Wartungsmodus und Team-Zugang
+Solange in `config.js` `maintenance: true` steht, sehen Besucher nur die Seite „Hier wird gerade gebaut“.
+
+**Team-Passwort festlegen**
+1. `https://meinhandwerkerportal.com/?passwort-erzeugen` öffnen, Passwort zweimal eingeben, **Zeile erzeugen**.
+   Das Passwort verlässt dabei das Gerät nicht.
+2. Die erzeugte Zeile kopieren. Sie beginnt mit `maintenancePasswordHash: 'pbkdf2$…`.
+3. Auf GitHub `config.js` bearbeiten (Stift-Symbol) und die Zeile `maintenancePasswordHash: '',`
+   durch die kopierte Zeile ersetzen, dann **Commit changes**.
+
+**Entsperren:** Auf der Wartungsseite auf das **Logo** oben links tippen – es öffnet sich ein Fenster
+mit Passwortfeld. Auf der Seite selbst gibt es keinen sichtbaren Hinweis auf den Zugang.
+Das gilt pro Gerät bzw. Browser, auch für die Homescreen-App. „Vorschau beenden“ in der orangefarbenen
+Leiste sperrt wieder. Wird das Passwort geändert, verfallen alle bisherigen Freischaltungen.
+
+**Start der Seite:** `maintenance: false` setzen.
+
+> Das ist eine Zugangssperre im Browser, kein Serverschutz: Der Code der Seite ist öffentlich.
+> Die Daten (Konten, Aufträge, Angebote) schützt unabhängig davon die Datenbank.
+> Ohne Passwort-Hash funktioniert der Zugang über `?vorschau=an`.
+
 ## Vor dem Livegang
+- [ ] `maintenance: false` in `config.js`
 - [ ] **Impressum** und **Datenschutzerklärung** in `app.js` (Funktionen `impressum`/`datenschutz`)
       mit echten Angaben füllen bzw. rechtlich prüfen lassen
 - [ ] Eigener SMTP-Mailversand in Supabase

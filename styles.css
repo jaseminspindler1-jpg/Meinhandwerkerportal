@@ -286,3 +286,20 @@ body.maintenance { padding-bottom: 0; }
 form.card > label:first-child, form.card > fieldset:first-child, form.card > h2:first-child,
 .card.two > div:first-child > label { margin-top: 0; }
 @media (min-width: 561px) { .card.two > div > label { margin-top: 0; } }
+
+/* Team-Zugang auf der Wartungsseite */
+.unlock { margin-top: 20px; width: 100%; max-width: 420px; }
+.unlock-dialog {
+  width: min(400px, calc(100% - 32px)); padding: 20px; border: 0; border-radius: var(--radius);
+  background: var(--card); color: var(--ink); border-top: 4px solid var(--brand);
+}
+.unlock-dialog::backdrop { background: rgba(15, 19, 22, .55); }
+.unlock-dialog .unlock { margin: 0; max-width: none; }
+.unlock-dialog h2 { margin: 0; }
+.icon-btn {
+  background: none; border: 0; padding: 6px; margin: -6px; color: var(--muted); cursor: pointer;
+  border-radius: var(--radius); display: inline-flex;
+}
+.icon-btn:hover { color: var(--ink); }
+.icon-btn .i { width: 22px; height: 22px; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
