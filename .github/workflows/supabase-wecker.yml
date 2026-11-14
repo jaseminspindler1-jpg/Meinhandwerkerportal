@@ -1,0 +1,37 @@
+# Supabase-Wecker
+# Im kostenlosen Supabase-Tarif wird ein Projekt nach 7 Tagen ohne Zugriff pausiert.
+# Diese Aufgabe fragt alle 3 Tage einmal kurz die Datenbank ab, damit das nicht passiert.
+# Schlägt die Abfrage fehl (z. B. weil das Projekt schon pausiert ist), schickt GitHub
+# dir eine E-Mail – dann im Supabase-Dashboard "Restore project" klicken.
+# Manuell starten: Repository → Actions → "Supabase-Wecker" → "Run workflow".
+name: Supabase-Wecker
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'   # alle 3 Tage um 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: config.js
+          sparse-checkout-cone-mode: false
+
+      - name: Supabase anfragen
+        run: |
+          URL=$(grep -oP "supabaseUrl:\s*'\K[^']+" config.js || true)
+          KEY=$(grep -oP "supabaseAnonKey:\s*'\K[^']+" config.js || true)
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "Keine Supabase-Zugangsdaten in config.js – nichts zu tun."
+            exit 0
+          fi
+          echo "Frage $URL an …"
+          curl --fail-with-body -sS --retry 3 --retry-delay 20 --retry-all-errors --max-time 30 \
+            "$URL/rest/v1/profiles?select=id&limit=1" -H "apikey: $KEY" -o /dev/null -w "Antwort: HTTP %{http_code}\n"

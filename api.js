@@ -192,7 +192,7 @@ function translateError(msg) {
     [/rate limit/i, 'Zu viele Versuche – bitte kurz warten und erneut versuchen.'],
     [/duplicate key.*offers_job_id_craftsman_id/i, 'Du hast für diesen Auftrag bereits ein Angebot abgegeben.'],
     [/row-level security/i, 'Dafür fehlt die Berechtigung.'],
-    [/Failed to fetch|NetworkError/i, 'Keine Verbindung zum Server. Bitte Internetverbindung prüfen.'],
+    [/Failed to fetch|NetworkError|Load failed|Network request failed/i, 'Der Server ist gerade nicht erreichbar. Bitte prüfe deine Internetverbindung oder versuche es in ein paar Minuten noch einmal.'],
   ];
   const hit = map.find(([re]) => re.test(msg));
   return hit ? hit[1] : msg;
