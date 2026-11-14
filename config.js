@@ -14,5 +14,5 @@ window.MHP_CONFIG = {
   // Erzeugen unter https://meinhandwerkerportal.com/?passwort-erzeugen und die
   // erzeugte Zeile hier eintragen. Leer = Zugang stattdessen über ?vorschau=an.
   // Hier steht nur ein Hash, nie das Passwort selbst.
-  maintenancePasswordHash: '',
+  maintenancePasswordHash: 'pbkdf2$310000$UPbfvnN0wf9VhdcSfX3TaQ==$ZjeBuw3DWLYHYE2HneAEHXC07vngSzDd/rom324OpBc=',
 };
