@@ -303,3 +303,9 @@ form.card > label:first-child, form.card > fieldset:first-child, form.card > h2:
 .icon-btn:hover { color: var(--ink); }
 .icon-btn .i { width: 22px; height: 22px; }
 code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+
+/* Hinweisbox (z. B. nach Klick auf den Link in der Bestätigungsmail) */
+.notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); margin-bottom: 20px; font-weight: 500; width: 100%; }
+.notice .i { margin-top: 2px; }
+.notice.ok { background: var(--ok-soft); color: var(--ok); }
+.notice.warn { background: var(--brand-soft); color: var(--brand-dark); }

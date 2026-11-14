@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Bitte bestätige deine E-Mail-Adresse</title>
+</head>
+<body style="margin:0;padding:0;background:#F4F2ED;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F2ED;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E0DCD3;border-radius:6px;">
+      <tr><td style="background:#1F262D;border-radius:6px 6px 0 0;padding:16px 24px;border-bottom:4px solid #D9480F;">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding-right:10px;"><img src="https://meinhandwerkerportal.com/icons/icon-192.png" width="32" height="32" alt="" style="display:block;border-radius:4px;"></td>
+          <td style="font-family:Arial,Helvetica,sans-serif;font-size:19px;font-weight:bold;color:#F4F2ED;">mein<span style="color:#FF8A4C;">handwerker</span>portal</td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:28px 24px 8px;font-family:Arial,Helvetica,sans-serif;color:#1C2127;">
+        <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;">Bitte bestätige deine E-Mail-Adresse</h1>
+        <p style="margin:0 0 22px;font-size:16px;line-height:1.55;">Schön, dass du dabei bist! Tippe auf den Button, um dein Konto bei Mein Handwerkerportal zu aktivieren.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:6px;background:#D9480F;">
+          <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 22px;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:6px;">E-Mail-Adresse bestätigen</a>
+        </td></tr></table>
+        <p style="margin:22px 0 0;font-size:14px;line-height:1.55;color:#5E6772;">Der Link ist 24 Stunden gültig.</p>
+        <p style="margin:12px 0 0;font-size:13px;line-height:1.5;color:#5E6772;">Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:<br><a href="{{ .ConfirmationURL }}" style="color:#D9480F;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+      </td></tr>
+      <tr><td style="padding:20px 24px 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#5E6772;border-top:1px solid #E0DCD3;">
+        Du hast dich nicht registriert? Dann kannst du diese E-Mail einfach ignorieren – es wird kein Konto angelegt.<br><br>
+        Mein Handwerkerportal · <a href="https://meinhandwerkerportal.com" style="color:#5E6772;">meinhandwerkerportal.com</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

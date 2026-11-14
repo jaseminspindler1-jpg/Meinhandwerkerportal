@@ -678,14 +678,34 @@ function passwordGeneratorView() {
     </section>`;
 }
 
-(async function start() {
-  const wantsGenerator = new URLSearchParams(location.search).has('passwort-erzeugen');
-  if (maintenanceActive() || wantsGenerator) { showMaintenance(); return; }
+function authLinkError(desc) {
+  const d = (desc || '').replace(/\+/g, ' ');
+  if (/expired|invalid/i.test(d)) return 'Der Link ist abgelaufen oder wurde schon benutzt. Melde dich einfach an – oder fordere unter „Passwort vergessen?“ einen neuen Link an.';
+  return d || 'Der Link konnte nicht verarbeitet werden.';
+}
 
+(async function start() {
   // Rücksprung aus Bestätigungs-/Passwort-Mails: Supabase hängt Tokens an die URL (#access_token=…)
   const authHash = new URLSearchParams(location.hash.startsWith('#/') ? '' : location.hash.slice(1));
   const authType = authHash.get('type');
   const authError = authHash.get('error_description');
+  const fromAuthLink = authHash.has('access_token') || !!authError;
+
+  const wantsGenerator = new URLSearchParams(location.search).has('passwort-erzeugen');
+  if (maintenanceActive() || wantsGenerator) {
+    showMaintenance();
+    // Auch während der Wartung zeigen, dass der Link aus der Mail funktioniert hat.
+    // (Die Bestätigung selbst passiert bereits bei Supabase, bevor diese Seite öffnet.)
+    if (fromAuthLink && !wantsGenerator) {
+      const msg = authError ? authLinkError(authError)
+        : authType === 'recovery' ? 'Dein Link zum Zurücksetzen des Passworts ist gültig. Das neue Passwort kannst du festlegen, sobald die Seite startet.'
+        : 'Deine E-Mail-Adresse ist bestätigt. Sobald die Seite startet, kannst du dich anmelden.';
+      document.querySelector('.maint h1').insertAdjacentHTML('beforebegin',
+        `<div class="notice ${authError ? 'warn' : 'ok'}">${icon(authError ? 'x' : 'check')}<span>${esc(msg)}</span></div>`);
+      history.replaceState(null, '', location.pathname);
+    }
+    return;
+  }
 
   await api.init((event) => {
     if (event === 'PASSWORD_RECOVERY') go('#/passwort-neu');
@@ -693,9 +713,9 @@ function passwordGeneratorView() {
     else renderChrome(parseHash().parts[0] || ''); // z. B. Token-Erneuerung: Formulare nicht verwerfen
   });
 
-  if (authHash.has('access_token') || authError) {
+  if (fromAuthLink) {
     history.replaceState(null, '', location.pathname + (authType === 'recovery' ? '#/passwort-neu' : '#/'));
-    if (authError) toast(authError.replace(/\+/g, ' '));
+    if (authError) toast(authLinkError(authError));
     else if (authType === 'signup') toast('E-Mail bestätigt – willkommen! ✓');
   }
 
