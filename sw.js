@@ -1,6 +1,8 @@
 // Service Worker: macht die App offline-fähig und installierbar.
-const CACHE = 'mhp-v3';
-const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'api.js', 'config.js', 'vendor/supabase-2.118.0.js', 'manifest.webmanifest',
+const CACHE = 'mhp-v4';
+const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'api.js', 'icons.js',
+  'fonts/barlow-latin-400-normal.woff2', 'fonts/barlow-latin-500-normal.woff2', 'fonts/barlow-latin-600-normal.woff2',
+  'fonts/barlow-latin-700-normal.woff2', 'fonts/barlow-condensed-latin-600-normal.woff2', 'fonts/barlow-condensed-latin-700-normal.woff2', 'config.js', 'vendor/supabase-2.118.0.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'];
 
 self.addEventListener('install', (e) => {

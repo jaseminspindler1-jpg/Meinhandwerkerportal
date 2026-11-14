@@ -6,14 +6,14 @@
 'use strict';
 
 const TRADES = [
-  { id: 'elektro', name: 'Elektriker', emoji: '⚡' },
-  { id: 'sanitaer', name: 'Sanitär & Heizung', emoji: '🚿' },
-  { id: 'maler', name: 'Maler & Lackierer', emoji: '🎨' },
-  { id: 'tischler', name: 'Tischler / Schreiner', emoji: '🪚' },
-  { id: 'dach', name: 'Dachdecker', emoji: '🏠' },
-  { id: 'fliesen', name: 'Fliesenleger', emoji: '🧱' },
-  { id: 'garten', name: 'Garten & Landschaft', emoji: '🌳' },
-  { id: 'umzug', name: 'Umzug & Montage', emoji: '📦' },
+  { id: 'elektro', name: 'Elektriker', icon: 'zap' },
+  { id: 'sanitaer', name: 'Sanitär & Heizung', icon: 'shower' },
+  { id: 'maler', name: 'Maler & Lackierer', icon: 'roller' },
+  { id: 'tischler', name: 'Tischler / Schreiner', icon: 'hammer' },
+  { id: 'dach', name: 'Dachdecker', icon: 'roof' },
+  { id: 'fliesen', name: 'Fliesenleger', icon: 'tiles' },
+  { id: 'garten', name: 'Garten & Landschaft', icon: 'tree' },
+  { id: 'umzug', name: 'Umzug & Montage', icon: 'truck' },
 ];
 
 const regionPrefix = (plz) => (/^\d{2}/.test(plz || '') ? plz.slice(0, 2) : '');
