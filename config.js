@@ -10,7 +10,7 @@ window.MHP_CONFIG = {
   // Zum Start der Seite auf false setzen.
   maintenance: true,
 
-  // Team-Passwort für die Wartungsseite ("Zugang fürs Team").
+  // Team-Passwort für die Wartungsseite (Tipp aufs Logo öffnet das Passwortfenster).
   // Erzeugen unter https://meinhandwerkerportal.com/?passwort-erzeugen und die
   // erzeugte Zeile hier eintragen. Leer = Zugang stattdessen über ?vorschau=an.
   // Hier steht nur ein Hash, nie das Passwort selbst.

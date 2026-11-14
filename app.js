@@ -607,23 +607,31 @@ function showMaintenance() {
       <p>Auf <strong>meinhandwerkerportal.com</strong> werden im Moment Wartungsarbeiten durchgeführt.</p>
       <p>Bald findest du hier Handwerker aus deiner Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
       <p class="muted">Danke für deine Geduld – schau gerne bald wieder vorbei!</p>
-      ${pwParts() ? `
-      <button class="link-btn team-link" id="teamLink" type="button">Zugang fürs Team</button>
-      <form id="unlockForm" class="unlock" hidden>
-        <label for="up">Passwort</label>
-        <div class="unlock-row">
-          <input id="up" name="password" type="password" autocomplete="current-password" required>
-          <button class="btn" type="submit">Entsperren</button>
-        </div>
-      </form>` : ''}
     </section>`;
 
-  document.getElementById('teamLink')?.addEventListener('click', (e) => {
-    e.currentTarget.hidden = true;
-    const f = document.getElementById('unlockForm');
-    f.hidden = false;
-    f.password.focus();
-  });
+  // Versteckter Team-Zugang: Tipp auf das Logo öffnet ein Fenster mit Passwortfeld.
+  if (!generator) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <dialog id="unlockDialog" class="unlock-dialog" aria-labelledby="unlockTitle">
+        <form id="unlockForm" class="unlock">
+          <div class="row"><h2 id="unlockTitle">Team-Zugang</h2>
+            <button class="icon-btn" type="button" id="unlockClose" aria-label="Schließen">${icon('x')}</button></div>
+          ${pwParts() ? `
+          <label for="up">Passwort</label>
+          <input id="up" name="password" type="password" autocomplete="current-password" required>
+          <button class="btn block" type="submit">Entsperren</button>`
+          : '<p class="muted">Es ist noch kein Team-Passwort festgelegt.</p>'}
+        </form>
+      </dialog>`);
+    const dlg = document.getElementById('unlockDialog');
+    document.querySelector('.brand').addEventListener('click', (e) => {
+      e.preventDefault();
+      dlg.showModal();
+      dlg.querySelector('input')?.focus();
+    });
+    document.getElementById('unlockClose').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); // Tipp neben das Fenster
+  }
   onSubmit('#unlockForm', async (d, form) => {
     const p = pwParts();
     const ok = (await pbkdf2(d.password, p.salt, p.it)) === p.hash;

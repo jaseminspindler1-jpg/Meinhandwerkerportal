@@ -60,7 +60,8 @@ Solange in `config.js` `maintenance: true` steht, sehen Besucher nur die Seite �
 3. Auf GitHub `config.js` bearbeiten (Stift-Symbol) und die Zeile `maintenancePasswordHash: '',`
    durch die kopierte Zeile ersetzen, dann **Commit changes**.
 
-**Entsperren:** Auf der Wartungsseite unten auf „Zugang fürs Team“ tippen und das Passwort eingeben.
+**Entsperren:** Auf der Wartungsseite auf das **Logo** oben links tippen – es öffnet sich ein Fenster
+mit Passwortfeld. Auf der Seite selbst gibt es keinen sichtbaren Hinweis auf den Zugang.
 Das gilt pro Gerät bzw. Browser, auch für die Homescreen-App. „Vorschau beenden“ in der orangefarbenen
 Leiste sperrt wieder. Wird das Passwort geändert, verfallen alle bisherigen Freischaltungen.
 
