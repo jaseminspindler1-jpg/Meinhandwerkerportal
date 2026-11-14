@@ -573,10 +573,10 @@ function showMaintenance() {
   document.getElementById('view').innerHTML = `
     <section class="maint">
       <div class="maint-icon" aria-hidden="true">${icon('construction')}</div>
-      <h1>Wir bauen gerade für Sie</h1>
+      <h1>Hier wird gerade gebaut</h1>
       <p>Auf <strong>meinhandwerkerportal.com</strong> werden im Moment Wartungsarbeiten durchgeführt.</p>
-      <p>Bald finden Sie hier Handwerker aus Ihrer Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
-      <p class="muted">Vielen Dank für Ihre Geduld. Schauen Sie gerne bald wieder vorbei!</p>
+      <p>Bald findest du hier Handwerker aus deiner Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
+      <p class="muted">Danke für deine Geduld – schau gerne bald wieder vorbei!</p>
     </section>`;
 }
 
