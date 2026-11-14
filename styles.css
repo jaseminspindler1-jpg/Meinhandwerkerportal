@@ -167,3 +167,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); out
 .btn:disabled { opacity: .6; cursor: wait; }
 main[aria-busy="true"] { opacity: .6; transition: opacity .2s .15s; }
 .row h1, .row h3 { margin: 0; }
+
+/* ---------- Wartungsmodus ---------- */
+[hidden] { display: none !important; }
+body.maintenance { padding-bottom: 0; }
+.maint {
+  min-height: calc(100vh - 140px); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center; padding: 24px 8px;
+}
+.maint-icon {
+  font-size: 3rem; width: 96px; height: 96px; border-radius: 28px; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: center; background: var(--brand-soft);
+}
+.maint h1 { font-size: 1.8rem; margin-bottom: 12px; }
+.maint p { max-width: 460px; }
+.preview-bar {
+  background: #1F2328; color: #fff; text-align: center; font-size: .8rem; padding: 6px 12px;
+}
+.preview-bar a { color: #FDBA8C; }

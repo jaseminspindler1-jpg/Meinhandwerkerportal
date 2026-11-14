@@ -539,7 +539,40 @@ function bind(parts, q) {
 }
 
 /* ---------- Start ---------- */
+/* ---------- Wartungsmodus ---------- */
+function maintenanceActive() {
+  const flag = new URLSearchParams(location.search).get('vorschau');
+  try {
+    if (flag === 'an') localStorage.setItem('mhp-vorschau', '1');
+    if (flag === 'aus') localStorage.removeItem('mhp-vorschau');
+    if (flag) history.replaceState(null, '', location.pathname + location.hash);
+  } catch (_) { /* ignore */ }
+  let preview = false;
+  try { preview = localStorage.getItem('mhp-vorschau') === '1'; } catch (_) { /* ignore */ }
+  if (preview && window.MHP_CONFIG?.maintenance) {
+    document.body.insertAdjacentHTML('afterbegin', '<div class="preview-bar">Vorschau – Besucher sehen gerade die Wartungsseite · <a href="?vorschau=aus">Vorschau beenden</a></div>');
+  }
+  return !!window.MHP_CONFIG?.maintenance && !preview;
+}
+
+function showMaintenance() {
+  document.title = 'Wartungsarbeiten – Mein Handwerkerportal';
+  document.body.classList.add('maintenance');
+  document.getElementById('topAction').hidden = true;
+  document.getElementById('tabbar').hidden = true;
+  document.getElementById('view').innerHTML = `
+    <section class="maint">
+      <div class="maint-icon" aria-hidden="true">🛠️</div>
+      <h1>Wir bauen gerade für Sie</h1>
+      <p>Auf <strong>meinhandwerkerportal.com</strong> werden im Moment Wartungsarbeiten durchgeführt.</p>
+      <p>Bald finden Sie hier Handwerker aus Ihrer Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
+      <p class="muted">Vielen Dank für Ihre Geduld. Schauen Sie gerne bald wieder vorbei!</p>
+    </section>`;
+}
+
 (async function start() {
+  if (maintenanceActive()) { showMaintenance(); return; }
+
   // Rücksprung aus Bestätigungs-/Passwort-Mails: Supabase hängt Tokens an die URL (#access_token=…)
   const authHash = new URLSearchParams(location.hash.startsWith('#/') ? '' : location.hash.slice(1));
   const authType = authHash.get('type');
