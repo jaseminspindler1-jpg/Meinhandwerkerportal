@@ -550,19 +550,48 @@ function bind(parts, q) {
 
 /* ---------- Start ---------- */
 /* ---------- Wartungsmodus ---------- */
+/* Zugang während der Wartung:
+ * - Ist in config.js ein maintenancePasswordHash gesetzt, entsperrt nur das Passwort die App.
+ *   Gespeichert wird nur ein PBKDF2-Hash (absichtlich langsam), nie das Passwort selbst.
+ *   Wird das Passwort geändert, verfallen alle bisherigen Freischaltungen (Bindung an das Salt).
+ * - Ohne Passwort-Hash genügt ?vorschau=an.
+ * Hinweis: Das ist eine Zugangssperre im Browser, kein Serverschutz. Die Daten selbst schützt die
+ * Datenbank (Row Level Security) unabhängig davon. */
+const PREVIEW_KEY = 'mhp-vorschau';
+const cfg = () => window.MHP_CONFIG || {};
+const pwParts = () => {
+  const [alg, it, salt, hash] = String(cfg().maintenancePasswordHash || '').split('$');
+  return alg === 'pbkdf2' && it && salt && hash ? { it: Number(it), salt, hash } : null;
+};
+const previewToken = () => pwParts()?.salt || '1';
+const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+async function pbkdf2(password, saltB64, iterations) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const salt = Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0));
+  return b64(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, 256));
+}
+async function makePasswordHash(password) {
+  const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+  const it = 310000;
+  return `pbkdf2$${it}$${salt}$${await pbkdf2(password, salt, it)}`;
+}
+const previewStore = {
+  get() { try { return localStorage.getItem(PREVIEW_KEY); } catch (_) { return null; } },
+  put(v) { try { localStorage.setItem(PREVIEW_KEY, v); } catch (_) { /* ignore */ } },
+  drop() { try { localStorage.removeItem(PREVIEW_KEY); } catch (_) { /* ignore */ } },
+};
+
 function maintenanceActive() {
   const flag = new URLSearchParams(location.search).get('vorschau');
-  try {
-    if (flag === 'an') localStorage.setItem('mhp-vorschau', '1');
-    if (flag === 'aus') localStorage.removeItem('mhp-vorschau');
-    if (flag) history.replaceState(null, '', location.pathname + location.hash);
-  } catch (_) { /* ignore */ }
-  let preview = false;
-  try { preview = localStorage.getItem('mhp-vorschau') === '1'; } catch (_) { /* ignore */ }
-  if (preview && window.MHP_CONFIG?.maintenance) {
+  if (flag === 'aus') previewStore.drop();
+  if (flag === 'an' && !pwParts()) previewStore.put('1');
+  if (flag) history.replaceState(null, '', location.pathname + location.hash);
+  if (!cfg().maintenance) return false;
+  const unlocked = previewStore.get() === previewToken();
+  if (unlocked) {
     document.body.insertAdjacentHTML('afterbegin', '<div class="preview-bar">Vorschau – Besucher sehen gerade die Wartungsseite · <a href="?vorschau=aus">Vorschau beenden</a></div>');
   }
-  return !!window.MHP_CONFIG?.maintenance && !preview;
+  return !unlocked;
 }
 
 function showMaintenance() {
@@ -570,18 +599,80 @@ function showMaintenance() {
   document.body.classList.add('maintenance');
   document.getElementById('topAction').hidden = true;
   document.getElementById('tabbar').hidden = true;
-  document.getElementById('view').innerHTML = `
+  const generator = new URLSearchParams(location.search).has('passwort-erzeugen');
+  document.getElementById('view').innerHTML = generator ? passwordGeneratorView() : `
     <section class="maint">
       <div class="maint-icon" aria-hidden="true">${icon('construction')}</div>
       <h1>Hier wird gerade gebaut</h1>
       <p>Auf <strong>meinhandwerkerportal.com</strong> werden im Moment Wartungsarbeiten durchgeführt.</p>
       <p>Bald findest du hier Handwerker aus deiner Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
       <p class="muted">Danke für deine Geduld – schau gerne bald wieder vorbei!</p>
+      ${pwParts() ? `
+      <button class="link-btn team-link" id="teamLink" type="button">Zugang fürs Team</button>
+      <form id="unlockForm" class="unlock" hidden>
+        <label for="up">Passwort</label>
+        <div class="unlock-row">
+          <input id="up" name="password" type="password" autocomplete="current-password" required>
+          <button class="btn" type="submit">Entsperren</button>
+        </div>
+      </form>` : ''}
+    </section>`;
+
+  document.getElementById('teamLink')?.addEventListener('click', (e) => {
+    e.currentTarget.hidden = true;
+    const f = document.getElementById('unlockForm');
+    f.hidden = false;
+    f.password.focus();
+  });
+  onSubmit('#unlockForm', async (d, form) => {
+    const p = pwParts();
+    const ok = (await pbkdf2(d.password, p.salt, p.it)) === p.hash;
+    if (!ok) {
+      await new Promise((r) => setTimeout(r, 800));
+      form.password.value = '';
+      throw new Error('Das Passwort stimmt nicht.');
+    }
+    previewStore.put(p.salt);
+    location.replace(location.pathname);
+  });
+  onSubmit('#genForm', async (d) => {
+    if (d.password.length < 10) throw new Error('Bitte mindestens 10 Zeichen verwenden.');
+    if (d.password !== d.repeat) throw new Error('Die beiden Eingaben stimmen nicht überein.');
+    const out = document.getElementById('genOut');
+    out.value = `maintenancePasswordHash: '${await makePasswordHash(d.password)}',`;
+    document.getElementById('genResult').hidden = false;
+    out.select();
+  });
+  document.getElementById('genCopy')?.addEventListener('click', async () => {
+    const out = document.getElementById('genOut');
+    try { await navigator.clipboard.writeText(out.value); toast('Kopiert ✓'); } catch (_) { out.select(); toast('Bitte den markierten Text kopieren'); }
+  });
+}
+
+function passwordGeneratorView() {
+  return `
+    <section class="maint">
+      <div class="maint-icon" aria-hidden="true">${icon('login')}</div>
+      <h1>Team-Passwort festlegen</h1>
+      <p>Das Passwort wird nur hier auf deinem Gerät verarbeitet und nirgends hingeschickt. Heraus kommt eine Zeile für <code>config.js</code>.</p>
+      <form id="genForm" class="unlock" style="max-width:none">
+        <label for="gp">Neues Passwort (mind. 10 Zeichen)</label>
+        <input id="gp" name="password" type="password" autocomplete="new-password" minlength="10" required>
+        <label for="gr">Passwort wiederholen</label>
+        <input id="gr" name="repeat" type="password" autocomplete="new-password" required>
+        <button class="btn block" type="submit">Zeile erzeugen</button>
+      </form>
+      <div id="genResult" hidden style="width:100%;margin-top:18px">
+        <label for="genOut">Diese Zeile in config.js eintragen (ersetzt die Zeile mit den leeren Anführungszeichen)</label>
+        <textarea id="genOut" readonly rows="4" style="font-family:ui-monospace,monospace;font-size:.85rem"></textarea>
+        <button class="btn secondary block" id="genCopy" type="button">Zeile kopieren</button>
+      </div>
     </section>`;
 }
 
 (async function start() {
-  if (maintenanceActive()) { showMaintenance(); return; }
+  const wantsGenerator = new URLSearchParams(location.search).has('passwort-erzeugen');
+  if (maintenanceActive() || wantsGenerator) { showMaintenance(); return; }
 
   // Rücksprung aus Bestätigungs-/Passwort-Mails: Supabase hängt Tokens an die URL (#access_token=…)
   const authHash = new URLSearchParams(location.hash.startsWith('#/') ? '' : location.hash.slice(1));

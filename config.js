@@ -7,9 +7,12 @@ window.MHP_CONFIG = {
   supabaseAnonKey: 'sb_publishable_YFgqWpCj-euDPxWEp6MHkg_9SBEm9jq',
 
   // Wartungsmodus: true = Besucher sehen nur die Seite "Wartungsarbeiten".
-  // Du selbst kommst trotzdem in die App, wenn du einmal
-  //   https://meinhandwerkerportal.com/?vorschau=an
-  // aufrufst (gilt danach auf diesem Gerät; ?vorschau=aus beendet es).
-  // Zum Start der Seite einfach auf false setzen.
+  // Zum Start der Seite auf false setzen.
   maintenance: true,
+
+  // Team-Passwort für die Wartungsseite ("Zugang fürs Team").
+  // Erzeugen unter https://meinhandwerkerportal.com/?passwort-erzeugen und die
+  // erzeugte Zeile hier eintragen. Leer = Zugang stattdessen über ?vorschau=an.
+  // Hier steht nur ein Hash, nie das Passwort selbst.
+  maintenancePasswordHash: '',
 };
