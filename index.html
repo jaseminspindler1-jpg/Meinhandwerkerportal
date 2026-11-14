@@ -5,19 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mein Handwerkerportal</title>
   <meta name="description" content="Handwerker in deiner Region finden, Aufträge erstellen und Angebote erhalten.">
-  <meta name="theme-color" content="#E8590C">
+  <meta name="theme-color" content="#1F262D">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Handwerker">
+  <link rel="preload" href="fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/barlow-condensed-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
     <a href="#/" class="brand">
-      <img src="icons/icon.svg" alt="" width="32" height="32">
-      <span>Mein<b>Handwerker</b>portal</span>
+      <img src="icons/icon.svg" alt="" width="34" height="34">
+      <span class="wordmark">mein<b>handwerker</b>portal</span>
     </a>
     <button id="topAction" class="role-toggle" type="button"></button>
   </header>
@@ -30,6 +32,7 @@
 
   <script src="vendor/supabase-2.118.0.js"></script>
   <script src="config.js"></script>
+  <script src="icons.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
 </body>

@@ -6,7 +6,7 @@ const api = createApi();
 const IS_DEMO = api.mode === 'demo';
 
 /* ---------- Hilfsfunktionen ---------- */
-const tradeById = (id) => TRADES.find((t) => t.id === id) || { name: id, emoji: '🔧' };
+const tradeById = (id) => TRADES.find((t) => t.id === id) || { name: id, icon: 'tool' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtDate = (v) => new Date(v).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const euro = (n) => Number(n).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -14,9 +14,12 @@ const enc = encodeURIComponent;
 const session = () => api.session;
 const profile = () => api.session?.profile;
 const isPro = () => profile()?.role === 'handwerker';
-const tradeTags = (ids) => ids.map((t) => `<span class="tag">${tradeById(t).emoji} ${esc(tradeById(t).name)}</span>`).join(' ');
+const tradeTags = (ids) => ids.map((t) => `<span class="tag">${icon(tradeById(t).icon)}${esc(tradeById(t).name)}</span>`).join(' ');
 const tradeOptions = (sel, placeholder) => `<option value="">${placeholder}</option>` +
   TRADES.map((t) => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${t.name}</option>`).join('');
+const meta = (items) => `<p class="meta">${items.filter(Boolean).map(([ic, html]) => `<span>${icon(ic)}${html}</span>`).join('')}</p>`;
+const telHref = (n) => `tel:${esc(String(n).replace(/[^\d+]/g, ''))}`;
+const backLink = () => `<a href="javascript:history.back()" class="back">${icon('back')}Zurück</a>`;
 const STATUS = { offen: ['Offen', ''], vergeben: ['Vergeben', 'ok'], storniert: ['Storniert', 'muted-tag'] };
 const statusTag = (s) => `<span class="tag ${STATUS[s]?.[1] || ''}">${STATUS[s]?.[0] || esc(s)}</span>`;
 
@@ -83,24 +86,24 @@ async function render() {
 function renderChrome(current) {
   const btn = document.getElementById('topAction');
   if (IS_DEMO) {
-    btn.textContent = isPro() ? '🧰 Handwerker' : '👤 Kunde';
+    btn.innerHTML = isPro() ? `${icon('business')}Handwerker` : `${icon('user')}Kunde`;
     btn.title = 'Demo: Rolle wechseln';
     btn.onclick = () => { api.setRole(isPro() ? 'kunde' : 'handwerker'); toast(isPro() ? 'Handwerker-Ansicht' : 'Kunden-Ansicht'); go('#/'); };
   } else if (session()) {
-    btn.textContent = (isPro() ? '🧰 ' : '👤 ') + (profile().name || 'Profil').split(' ')[0];
+    btn.innerHTML = icon(isPro() ? 'business' : 'user') + esc((profile().name || 'Profil').split(' ')[0]);
     btn.title = 'Mein Profil';
     btn.onclick = () => go('#/profil');
   } else {
-    btn.textContent = 'Anmelden';
+    btn.innerHTML = `${icon('login')}Anmelden`;
     btn.title = '';
     btn.onclick = () => go('#/login');
   }
   let tabs;
-  if (!session()) tabs = [['', '🏠', 'Start'], ['suche', '🔎', 'Suchen'], ['auftrag-neu', '➕', 'Auftrag'], ['login', '👤', 'Anmelden']];
-  else if (isPro()) tabs = [['', '🏠', 'Start'], ['auftraege', '📋', 'Aufträge'], ['angebote', '💬', 'Angebote'], ['profil', '🧰', 'Betrieb']];
-  else tabs = [['', '🏠', 'Start'], ['suche', '🔎', 'Suchen'], ['auftrag-neu', '➕', 'Auftrag'], ['meine-auftraege', '📋', 'Meine'], ['profil', '👤', 'Profil']];
+  if (!session()) tabs = [['', 'home', 'Start'], ['suche', 'search', 'Suchen'], ['auftrag-neu', 'plus', 'Auftrag'], ['login', 'user', 'Anmelden']];
+  else if (isPro()) tabs = [['', 'home', 'Start'], ['auftraege', 'list', 'Aufträge'], ['angebote', 'offers', 'Angebote'], ['profil', 'business', 'Betrieb']];
+  else tabs = [['', 'home', 'Start'], ['suche', 'search', 'Suchen'], ['auftrag-neu', 'plus', 'Auftrag'], ['meine-auftraege', 'list', 'Meine'], ['profil', 'user', 'Profil']];
   document.getElementById('tabbar').innerHTML = tabs
-    .map(([r, i, l]) => `<a href="#/${r}" class="${r === current ? 'active' : ''}"><span class="ico">${i}</span>${l}</a>`).join('');
+    .map(([r, i, l]) => `<a href="#/${r}" class="${r === current ? 'active' : ''}">${icon(i)}${l}</a>`).join('');
 }
 
 const demoBanner = () => '<div class="demo-banner">Demo-Modus · Daten nur auf diesem Gerät · Rolle oben rechts wechseln</div>';
@@ -124,24 +127,31 @@ async function home() {
   const plz = profile()?.plz || '';
   return `
     <section class="hero">
-      <h1>Den richtigen Handwerker finden</h1>
-      <p>Auftrag beschreiben, Angebote aus deiner Region erhalten, den besten Betrieb auswählen.</p>
+      <p class="eyebrow">Handwerker aus deiner Region</p>
+      <h1>Auftrag beschreiben. <span>Angebote bekommen.</span></h1>
+      <p>Sag uns, was zu tun ist und wo. Betriebe aus der Umgebung schicken dir ihr Angebot – du entscheidest, wen du beauftragst.</p>
       <form class="search" id="heroSearch">
         <select name="gewerk" aria-label="Gewerk">${tradeOptions('', 'Alle Gewerke')}</select>
         <input name="plz" inputmode="numeric" maxlength="5" placeholder="PLZ" aria-label="Postleitzahl" value="${esc(plz)}">
         <button class="btn" type="submit">Suchen</button>
       </form>
     </section>
-    <h2>Beliebte Gewerke</h2>
-    <div class="grid">
-      ${TRADES.map((t) => `<a class="card trade" href="#/suche?gewerk=${t.id}&plz=${enc(plz)}"><span class="emoji">${t.emoji}</span><strong>${t.name}</strong></a>`).join('')}
-    </div>
-    <div class="card" style="margin-top:12px">
-      <h3>So funktioniert's</h3>
-      <p class="muted">1. Auftrag kostenlos erstellen · 2. Angebote von Handwerkern erhalten · 3. Vergleichen und beauftragen</p>
-      <a class="btn" href="#/auftrag-neu">Auftrag erstellen</a>
-    </div>
-    ${!session() ? '<div class="card"><h3>Du bist Handwerker?</h3><p class="muted">Registriere deinen Betrieb kostenlos und erhalte Aufträge aus deiner Region.</p><a class="btn secondary" href="#/registrieren?rolle=handwerker">Betrieb registrieren</a></div>' : ''}
+    <section class="section">
+      <div class="section-head"><h2>Gewerke</h2><a href="#/suche?plz=${enc(plz)}">Alle Betriebe</a></div>
+      <div class="trade-list">
+        ${TRADES.map((t) => `<a class="trade-row" href="#/suche?gewerk=${t.id}&plz=${enc(plz)}"><span class="trade-ico">${icon(t.icon)}</span>${t.name}${icon('chevron', 'chev')}</a>`).join('')}
+      </div>
+    </section>
+    <section class="section">
+      <h2>So läuft's ab</h2>
+      <ol class="steps">
+        <li><strong>Auftrag beschreiben</strong><span>Was soll gemacht werden, wo und bis wann? Je genauer, desto besser passen die Angebote.</span></li>
+        <li><strong>Angebote vergleichen</strong><span>Jeder Betrieb nennt Preis, frühesten Termin und schreibt dir ein paar Zeilen dazu.</span></li>
+        <li><strong>Betrieb beauftragen</strong><span>Erst wenn du ein Angebot annimmst, bekommt der Betrieb deine Kontaktdaten.</span></li>
+      </ol>
+      <a class="btn" href="#/auftrag-neu">${icon('plus')}Auftrag erstellen</a>
+    </section>
+    ${!session() ? `<section class="section pro-band"><p class="eyebrow">Für Handwerksbetriebe</p><h2>Neue Aufträge aus deiner Gegend</h2><p>Lege dein Betriebsprofil an und sieh, was in deiner Region gesucht wird. Du entscheidest, wo du ein Angebot abgibst.</p><a class="btn" href="#/registrieren?rolle=handwerker">Betrieb registrieren</a></section>` : ''}
     ${legalLinks()}`;
 }
 
@@ -163,8 +173,8 @@ function craftsmanCard(c) {
   return `
     <a class="card link-card" href="#/handwerker/${enc(c.id)}">
       <h3>${esc(c.name)}</h3>
-      <p class="muted" style="margin:4px 0 8px">📍 ${esc(c.plz)} ${esc(c.city)}</p>
-      ${tradeTags(c.trades)}
+      ${meta([['pin', `${esc(c.plz)} ${esc(c.city)}`]])}
+      <p style="margin:10px 0 0">${tradeTags(c.trades)}</p>
     </a>`;
 }
 
@@ -172,10 +182,10 @@ async function craftsmanDetail([id]) {
   const c = await api.getCraftsman(id);
   if (!c) return notFound();
   return `
-    <a href="javascript:history.back()" class="muted">← Zurück</a>
+    ${backLink()}
     <div class="card" style="margin-top:8px">
       <h1>${esc(c.name)}</h1>
-      <p class="muted">📍 ${esc(c.plz)} ${esc(c.city)}${c.phone ? ` · ☎️ <a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : ''}</p>
+      ${meta([['pin', `${esc(c.plz)} ${esc(c.city)}`], c.phone && ['phone', `<a href="${telHref(c.phone)}">${esc(c.phone)}</a>`]])}
       <p>${tradeTags(c.trades)}</p>
       ${c.about ? `<p style="white-space:pre-line">${esc(c.about)}</p>` : ''}
       ${session()?.user.id === c.id ? '<p class="muted">Das ist dein öffentliches Profil.</p>' : `<a class="btn block" href="#/auftrag-neu?gewerk=${enc(c.trades[0] || '')}&handwerker=${enc(c.id)}">Angebot anfragen</a>`}
@@ -205,8 +215,8 @@ function register(_, q) {
     <form class="card" id="registerForm">
       <fieldset class="choice">
         <legend>Ich bin …</legend>
-        <label><input type="radio" name="role" value="kunde" ${role === 'kunde' ? 'checked' : ''}><span><strong>👤 Kunde</strong><small>Ich suche einen Handwerker</small></span></label>
-        <label><input type="radio" name="role" value="handwerker" ${role === 'handwerker' ? 'checked' : ''}><span><strong>🧰 Handwerker</strong><small>Ich biete meine Leistungen an</small></span></label>
+        <label><input type="radio" name="role" value="kunde" ${role === 'kunde' ? 'checked' : ''}><span><strong>${icon('user')}Kunde</strong><small>Ich suche einen Handwerker</small></span></label>
+        <label><input type="radio" name="role" value="handwerker" ${role === 'handwerker' ? 'checked' : ''}><span><strong>${icon('business')}Handwerker</strong><small>Ich biete meine Leistungen an</small></span></label>
       </fieldset>
       <label for="rn" id="rnLabel">${role === 'handwerker' ? 'Firmenname' : 'Name'}</label><input id="rn" name="name" required maxlength="120" autocomplete="name">
       <div class="two">
@@ -266,7 +276,7 @@ function jobCard(j) {
   return `
     <a class="card link-card" href="#/auftrag/${enc(j.id)}">
       <div class="row"><h3>${esc(j.title)}</h3>${badge}</div>
-      <p class="muted" style="margin:4px 0 0">${t.emoji} ${esc(t.name)} · 📍 ${esc(j.plz)} · ${fmtDate(j.created)}</p>
+      ${meta([[t.icon, esc(t.name)], ['pin', esc(j.plz)], ['clock', fmtDate(j.created)]])}
     </a>`;
 }
 
@@ -319,10 +329,10 @@ async function jobDetail([id]) {
           const c = o.craftsman || { name: 'Handwerker', phone: '' };
           const accepted = j.acceptedOffer === o.id;
           return `<div class="offer">
-            <div class="row"><strong><a href="#/handwerker/${enc(o.craftsmanId)}">${esc(c.name)}</a></strong><strong>${euro(o.price)}</strong></div>
-            <p class="muted" style="margin:2px 0 6px">Frühester Termin: ${fmtDate(o.date)}${c.city ? ` · 📍 ${esc(c.city)}` : ''}</p>
+            <div class="row"><strong><a href="#/handwerker/${enc(o.craftsmanId)}">${esc(c.name)}</a></strong><span class="price">${euro(o.price)}</span></div>
+            ${meta([['calendar', `ab ${fmtDate(o.date)}`], c.city && ['pin', esc(c.city)]])}
             <p style="white-space:pre-line">${esc(o.message)}</p>
-            ${accepted ? `<span class="tag ok">✓ Beauftragt</span>${c.phone ? ` <a class="btn small secondary" href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">☎️ ${esc(c.phone)}</a>` : ''}`
+            ${accepted ? `<span class="tag ok">✓ Beauftragt</span>${c.phone ? ` <a class="btn small secondary" href="${telHref(c.phone)}">${icon('phone')}${esc(c.phone)}</a>` : ''}`
               : j.status === 'offen' ? `<button class="btn small" data-accept="${esc(o.id)}">Angebot annehmen</button>` : ''}
           </div>`;
         }).join('') : `<p class="muted">Noch keine Angebote. Passende Handwerker aus deiner Region sehen deinen Auftrag jetzt.</p>${IS_DEMO ? '<p class="muted"><em>Demo-Tipp:</em> Oben rechts in die Handwerker-Ansicht wechseln und selbst ein Angebot abgeben.</p>' : ''}`}
@@ -338,8 +348,8 @@ async function jobDetail([id]) {
       </div>
       ${won && j.client ? `<div class="card"><h2>Kontakt zum Kunden</h2>
         <p><strong>${esc(j.client.name || 'Kunde')}</strong></p>
-        ${j.client.email ? `<p>✉️ <a href="mailto:${esc(j.client.email)}">${esc(j.client.email)}</a></p>` : ''}
-        ${j.client.phone ? `<p>☎️ <a href="tel:${esc(j.client.phone.replace(/[^\d+]/g, ''))}">${esc(j.client.phone)}</a></p>` : ''}
+        ${j.client.email ? `<p class="contact">${icon('mail')}<a href="mailto:${esc(j.client.email)}">${esc(j.client.email)}</a></p>` : ''}
+        ${j.client.phone ? `<p class="contact">${icon('phone')}<a href="${telHref(j.client.phone)}">${esc(j.client.phone)}</a></p>` : ''}
       </div>` : ''}`;
     } else if (j.status === 'offen') {
       const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
@@ -357,12 +367,12 @@ async function jobDetail([id]) {
   }
 
   return `
-    <a href="javascript:history.back()" class="muted">← Zurück</a>
+    ${backLink()}
     <div class="card" style="margin-top:8px">
       <div class="row"><h1 style="margin:0">${esc(j.title)}</h1>${statusTag(j.status)}</div>
-      <p class="muted" style="margin-top:6px">${t.emoji} ${esc(t.name)} · 📍 ${esc(j.plz)} · erstellt am ${fmtDate(j.created)}</p>
+      ${meta([[t.icon, esc(t.name)], ['pin', esc(j.plz)], ['clock', `erstellt am ${fmtDate(j.created)}`]])}
       <p style="white-space:pre-line">${esc(j.description)}</p>
-      <p class="muted">🗓 ${esc(j.when)}${j.budget ? ` · 💶 ${esc(j.budget)}` : ''}</p>
+      ${meta([['calendar', esc(j.when)], j.budget && ['euro', esc(j.budget)]])}
     </div>
     ${extra}`;
 }
@@ -467,7 +477,7 @@ function bind(parts, q) {
   onSubmit('#registerForm', async (d) => {
     const { needsConfirmation } = await api.signUp(d);
     if (needsConfirmation) {
-      document.getElementById('view').innerHTML = `<div class="card empty"><h2>Fast geschafft! 📬</h2>
+      document.getElementById('view').innerHTML = `<div class="card empty"><h2>Fast geschafft</h2>
         <p>Wir haben eine Bestätigungsmail an <strong>${esc(d.email)}</strong> geschickt.<br>Klicke auf den Link darin, um dein Konto zu aktivieren.</p></div>`;
       return;
     }
@@ -562,11 +572,11 @@ function showMaintenance() {
   document.getElementById('tabbar').hidden = true;
   document.getElementById('view').innerHTML = `
     <section class="maint">
-      <div class="maint-icon" aria-hidden="true">🛠️</div>
-      <h1>Wir bauen gerade für Sie</h1>
+      <div class="maint-icon" aria-hidden="true">${icon('construction')}</div>
+      <h1>Hier wird gerade gebaut</h1>
       <p>Auf <strong>meinhandwerkerportal.com</strong> werden im Moment Wartungsarbeiten durchgeführt.</p>
-      <p>Bald finden Sie hier Handwerker aus Ihrer Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
-      <p class="muted">Vielen Dank für Ihre Geduld. Schauen Sie gerne bald wieder vorbei!</p>
+      <p>Bald findest du hier Handwerker aus deiner Region – Auftrag einstellen, Angebote vergleichen, Betrieb beauftragen.</p>
+      <p class="muted">Danke für deine Geduld – schau gerne bald wieder vorbei!</p>
     </section>`;
 }
 
